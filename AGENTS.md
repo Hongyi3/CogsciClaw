@@ -22,6 +22,23 @@ Before changing anything substantial, read:
 6. the target `SKILL.md`
 7. `THREAT_MODEL.md` if the work touches execution, files, network, or secrets
 
+## Next Milestone
+
+Before starting any multi-file, scientific, architectural, or milestone-scale task, read:
+
+- `project_state/CURRENT_STAGE.md`
+- `project_state/NEXT_MILESTONE.md`
+
+Treat `project_state/CURRENT_STAGE.md` as the source of truth for the current phase, project maturity, active milestone, status, last completed milestone, blockers, and status evidence.
+
+Treat `project_state/NEXT_MILESTONE.md` as the executable brief for the immediate next milestone only.
+
+When a milestone is completed, update `project_state/CURRENT_STAGE.md`, `project_state/MILESTONE_HISTORY.md`, and `project_state/NEXT_MILESTONE.md` together.
+
+If work needs to go outside the declared next milestone, update the project-state files honestly first and explain why.
+
+Never mark a milestone complete unless implementation, tests, docs, and artifacts justify the status.
+
 ## How to work in this repo
 
 ### 1. Preserve the source of truth
@@ -31,7 +48,7 @@ Before changing anything substantial, read:
 If you change skill metadata:
 
 ```bash
-python scripts/render_skill_catalog.py
+python3 scripts/render_skill_catalog.py
 ```
 
 Do not edit generated listings by hand.
@@ -72,6 +89,18 @@ Treat the following as **P1** review issues:
 - doc drift between catalog and public docs
 - silent behavior changes in study timing, event labeling, or model structure
 
+### 6. Push completed changes
+
+If Codex changes any repo-tracked file for a task, the task is not complete until the task's changes are verified, committed, and pushed to the GitHub remote for the current branch.
+
+Push once per completed task, not after every intermediate edit.
+
+Do not include unrelated local changes.
+
+Never force-push or rewrite history unless explicitly requested.
+
+If authentication, network, branch protection, or unrelated dirty-worktree state prevents a safe push, report the blocker explicitly instead of claiming completion.
+
 ## Review guidelines
 
 When reviewing code or docs, check for:
@@ -86,7 +115,7 @@ When reviewing code or docs, check for:
 ## Commands
 
 ```bash
-python scripts/render_skill_catalog.py
+python3 scripts/render_skill_catalog.py
 pytest -q
 ```
 
@@ -119,4 +148,3 @@ A change is not done until:
 - new or changed scientific behavior is documented
 - supported/unsupported cases are explicit
 - any new public claim is backed by a real implementation path
-

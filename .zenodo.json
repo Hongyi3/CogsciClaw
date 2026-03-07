@@ -1,0 +1,22 @@
+{
+  "title": "cogsci-skilllib",
+  "description": "Standards-first cognitive-science agent skills scaffold for reproducible research workflows.",
+  "creators": [
+    {
+      "name": "REPLACE_WITH_FAMILY_NAME, REPLACE_WITH_GIVEN_NAME",
+      "affiliation": "REPLACE_WITH_AFFILIATION",
+      "orcid": "REPLACE_WITH_ORCID"
+    }
+  ],
+  "license": "TBD",
+  "keywords": [
+    "cognitive science",
+    "reproducibility",
+    "open science",
+    "BIDS",
+    "Psych-DS",
+    "agent skills"
+  ],
+  "upload_type": "software",
+  "access_right": "open"
+}

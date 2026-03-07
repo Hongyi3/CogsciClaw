@@ -1,0 +1,16 @@
+{
+  "benchmarks": [
+    {
+      "id": "behavioral-flanker-demo",
+      "status": "implemented-demo",
+      "modality": "behavioral",
+      "purpose": "end-to-end deterministic behavioral vertical slice with jsPsych, Psych-DS-aligned curation, and reproducibility bundle"
+    },
+    {
+      "id": "eeg-oddball-demo",
+      "status": "planned",
+      "modality": "eeg",
+      "purpose": "EEG/MEG expansion vertical slice"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReportBundle",
+  "type": "object",
+  "required": [
+    "report",
+    "methods",
+    "commands",
+    "environment",
+    "checksums"
+  ],
+  "properties": {
+    "report": { "type": "string" },
+    "methods": { "type": "string" },
+    "commands": { "type": "string" },
+    "environment": { "type": "string" },
+    "checksums": { "type": "string" },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "psychds": { "type": ["string", "null"] },
+        "bids": { "type": ["string", "null"] },
+        "hed": { "type": ["string", "null"] }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "ro_crate": { "type": ["string", "null"] },
+        "prov": { "type": ["string", "null"] }
+      }
+    },
+    "preregistration": {
+      "type": ["object", "null"]
+    }
+  }
+}

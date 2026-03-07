@@ -1,0 +1,38 @@
+study:
+  title: "Flanker task — behavioral vertical slice"
+  research_question: "How do congruent and incongruent flankers affect reaction time and accuracy?"
+  hypotheses:
+    - "Incongruent trials will increase reaction time relative to congruent trials."
+    - "Incongruent trials will reduce accuracy relative to congruent trials."
+
+design:
+  task_name: "flanker"
+  conditions:
+    - congruent
+    - incongruent
+  trial_count: 160
+  randomization: "participant-level random order with fixed seed in demo mode"
+  counterbalancing: "balanced left/right response mapping in demo mode"
+
+modality: behavioral
+standards:
+  - Psych-DS
+  - HED
+  - Cognitive Atlas
+
+participants:
+  target_n: 40
+  inclusion_criteria:
+    - "18+"
+    - "normal or corrected-to-normal vision"
+
+outputs:
+  task_package: true
+  curated_dataset: true
+  model_report: true
+  preregistration: true
+  reproducibility_bundle: true
+
+ethics:
+  contains_sensitive_data: false
+  notes: "Demo spec only; real study deployment requires local ethics review."

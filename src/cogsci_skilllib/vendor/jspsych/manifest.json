@@ -1,0 +1,16 @@
+{
+  "jspsych": {
+    "package": "jspsych",
+    "version": "8.2.2",
+    "source_url": "https://unpkg.com/jspsych@8.2.2/dist/index.browser.js",
+    "css_source_url": "https://unpkg.com/jspsych@8.2.2/css/jspsych.css",
+    "integrity": "sha256-b/z4SY91fEfWUs+fsN00nyX2VqS9OZbld4A3AusyKOE=",
+    "css_integrity": "sha256-gHCM7A4lc8sAyl22dggSGD51+wT0cYzlB+kpWljSsTo="
+  },
+  "plugin_html_keyboard_response": {
+    "package": "@jspsych/plugin-html-keyboard-response",
+    "version": "2.1.0",
+    "source_url": "https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0/dist/index.browser.js",
+    "integrity": "sha256-UycJUQsfQi7fn216VXuJKHx0Q5W6eW9qB3PZ0XjmZJ0="
+  }
+}

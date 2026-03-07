@@ -1,0 +1,208 @@
+{
+  "project": "cogsci-skilllib",
+  "version": "0.1.0a0",
+  "skills": [
+    {
+      "slug": "task-jspsych",
+      "name": "task-jspsych",
+      "status": "supported-demo",
+      "phase": "v1",
+      "lane": "behavior",
+      "standards": [
+        "jsPsych"
+      ],
+      "description": "Generate the canonical Flanker jsPsych task package from a structured study specification using local vendored assets.",
+      "trigger_keywords": [
+        "jspsych",
+        "behavioral task",
+        "browser experiment",
+        "flanker",
+        "stroop"
+      ],
+      "chaining_partners": [
+        "psychds-curator",
+        "hed-annotator",
+        "ddm-bayes",
+        "repro-bundle"
+      ],
+      "demo_command": "python3 scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir output/flanker-behavioral --validate-psychds auto"
+    },
+    {
+      "slug": "task-psychopy",
+      "name": "task-psychopy",
+      "status": "scaffold",
+      "phase": "v1",
+      "lane": "behavior",
+      "standards": [
+        "Psych-DS",
+        "HED",
+        "Cognitive Atlas"
+      ],
+      "description": "Generate lab-based or hybrid PsychoPy task packages from a structured study specification.",
+      "trigger_keywords": [
+        "psychopy",
+        "lab experiment",
+        "builder",
+        "hybrid task"
+      ],
+      "chaining_partners": [
+        "psychds-curator",
+        "hed-annotator",
+        "repro-bundle"
+      ],
+      "demo_command": "TBD"
+    },
+    {
+      "slug": "psychds-curator",
+      "name": "psychds-curator",
+      "status": "supported-demo",
+      "phase": "v1",
+      "lane": "curation",
+      "standards": [
+        "Psych-DS"
+      ],
+      "description": "Curate the deterministic Flanker demo trial tables into a Psych-DS-aligned dataset with optional official validator output.",
+      "trigger_keywords": [
+        "psych-ds",
+        "behavioral dataset",
+        "data curation"
+      ],
+      "chaining_partners": [
+        "task-jspsych",
+        "task-psychopy",
+        "ddm-bayes",
+        "repro-bundle"
+      ],
+      "demo_command": "python3 scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir output/flanker-behavioral --validate-psychds auto"
+    },
+    {
+      "slug": "bids-curator",
+      "name": "bids-curator",
+      "status": "scaffold",
+      "phase": "v1",
+      "lane": "curation",
+      "standards": [
+        "BIDS"
+      ],
+      "description": "Prepare BIDS-compatible dataset structure and metadata for EEG/MEG-focused workflows.",
+      "trigger_keywords": [
+        "bids",
+        "eeg bids",
+        "meg bids",
+        "dataset_description"
+      ],
+      "chaining_partners": [
+        "hed-annotator",
+        "eeg-meg-pipeline",
+        "repro-bundle"
+      ],
+      "demo_command": "TBD"
+    },
+    {
+      "slug": "hed-annotator",
+      "name": "hed-annotator",
+      "status": "scaffold",
+      "phase": "v1",
+      "lane": "annotation",
+      "standards": [
+        "HED",
+        "BIDS"
+      ],
+      "description": "Map task events to HED strings and emit validation outputs for event semantics.",
+      "trigger_keywords": [
+        "hed",
+        "event annotation",
+        "events.tsv",
+        "events.json"
+      ],
+      "chaining_partners": [
+        "task-jspsych",
+        "task-psychopy",
+        "bids-curator",
+        "eeg-meg-pipeline",
+        "repro-bundle"
+      ],
+      "demo_command": "TBD"
+    },
+    {
+      "slug": "ddm-bayes",
+      "name": "ddm-bayes",
+      "status": "scaffold",
+      "phase": "v1",
+      "lane": "modeling",
+      "standards": [
+        "PyMC",
+        "HDDM",
+        "ArviZ"
+      ],
+      "description": "Fit Bayesian and hierarchical drift-diffusion models with diagnostics and posterior predictive checks.",
+      "trigger_keywords": [
+        "ddm",
+        "bayesian",
+        "pymc",
+        "hddm",
+        "reaction time"
+      ],
+      "chaining_partners": [
+        "psychds-curator",
+        "repro-bundle"
+      ],
+      "demo_command": "TBD"
+    },
+    {
+      "slug": "eeg-meg-pipeline",
+      "name": "eeg-meg-pipeline",
+      "status": "scaffold",
+      "phase": "v1.1",
+      "lane": "neuro",
+      "standards": [
+        "BIDS",
+        "MNE-BIDS",
+        "MNE",
+        "HED"
+      ],
+      "description": "Orchestrate EEG/MEG intake and preprocessing with MNE-BIDS and MNE-Python.",
+      "trigger_keywords": [
+        "eeg",
+        "meg",
+        "erp",
+        "mne",
+        "mne-bids",
+        "oddball"
+      ],
+      "chaining_partners": [
+        "bids-curator",
+        "hed-annotator",
+        "repro-bundle"
+      ],
+      "demo_command": "TBD"
+    },
+    {
+      "slug": "repro-bundle",
+      "name": "repro-bundle",
+      "status": "supported-demo",
+      "phase": "v1",
+      "lane": "reproducibility",
+      "standards": [
+        "JSON Schema"
+      ],
+      "description": "Assemble the deterministic Flanker demo reproducibility bundle with manifest, methods, commands, environment, checksums, and validation artifacts.",
+      "trigger_keywords": [
+        "reproducibility bundle",
+        "report bundle",
+        "ro-crate",
+        "provenance"
+      ],
+      "chaining_partners": [
+        "task-jspsych",
+        "task-psychopy",
+        "psychds-curator",
+        "bids-curator",
+        "hed-annotator",
+        "ddm-bayes",
+        "eeg-meg-pipeline"
+      ],
+      "demo_command": "python3 scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir output/flanker-behavioral --validate-psychds auto"
+    }
+  ]
+}

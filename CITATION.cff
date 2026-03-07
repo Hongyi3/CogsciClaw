@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: "cogsci-skilllib"
+message: "If you use this project, please cite it using the metadata below."
+type: software
+authors:
+  - family-names: "REPLACE_WITH_FAMILY_NAME"
+    given-names: "REPLACE_WITH_GIVEN_NAME"
+version: "0.1.0-alpha"
+date-released: "2026-03-07"
+repository-code: "https://github.com/REPLACE_WITH_ORG/cogsci-skilllib"
+url: "https://github.com/REPLACE_WITH_ORG/cogsci-skilllib"
+abstract: >
+  Standards-first cognitive-science agent skills scaffold for reproducible,
+  publication-ready workflows.
+license: "TBD"
+keywords:
+  - cognitive science
+  - reproducibility
+  - open science
+  - agent skills
+  - BIDS
+  - Psych-DS

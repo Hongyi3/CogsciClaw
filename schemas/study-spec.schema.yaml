@@ -1,0 +1,71 @@
+title: StudySpec
+type: object
+required:
+  - study
+  - design
+  - modality
+  - outputs
+properties:
+  study:
+    type: object
+    required: [title, research_question]
+    properties:
+      title:
+        type: string
+      research_question:
+        type: string
+      hypotheses:
+        type: array
+        items:
+          type: string
+  design:
+    type: object
+    properties:
+      task_name:
+        type: string
+      conditions:
+        type: array
+        items:
+          type: string
+      trial_count:
+        type: integer
+      randomization:
+        type: string
+      counterbalancing:
+        type: string
+  modality:
+    type: string
+    enum: [behavioral, eeg, meg, fmri, questionnaire, neurophysiology]
+  standards:
+    type: array
+    items:
+      type: string
+  participants:
+    type: object
+    properties:
+      target_n:
+        type: integer
+      inclusion_criteria:
+        type: array
+        items:
+          type: string
+  outputs:
+    type: object
+    properties:
+      task_package:
+        type: boolean
+      curated_dataset:
+        type: boolean
+      model_report:
+        type: boolean
+      preregistration:
+        type: boolean
+      reproducibility_bundle:
+        type: boolean
+  ethics:
+    type: object
+    properties:
+      contains_sensitive_data:
+        type: boolean
+      notes:
+        type: string

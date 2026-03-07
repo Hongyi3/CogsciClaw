@@ -1,0 +1,49 @@
+# cogsci-skilllib
+
+Standards-first cognitive-science agent skills scaffold.
+
+## What this repository is for
+
+A ClawBio-style but cognitive-science-native repository for:
+- behavioral task generation
+- standards-compliant data organization
+- event annotation
+- Bayesian and drift-diffusion modeling
+- reproducibility bundles
+- agent-readable repository structure
+
+## Read first
+
+- /README.md
+- /MASTER_PLAN.md
+- /VISION.md
+- /METHODS_POLICY.md
+- /ROADMAP.md
+- /AGENTS.md
+- /docs/standards-stack.md
+- /docs/architecture.md
+- /docs/codex-playbook.md
+
+## Important directories
+
+- /skills/
+- /templates/
+- /schemas/
+- /examples/
+- /benchmarks/
+- /scripts/
+- /.github/
+
+## Source-of-truth policy
+
+Use `/skills/catalog.json` as the source of truth for public skill listings.
+Regenerate docs with:
+
+`python scripts/render_skill_catalog.py`
+
+## Notes for coding agents
+
+Do not treat placeholder scaffolding as finished capability.
+Do not claim support for a standard unless a validation path exists.
+Prefer a narrow, complete vertical slice over broad but shallow implementation.
+

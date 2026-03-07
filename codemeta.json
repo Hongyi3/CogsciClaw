@@ -1,0 +1,25 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "cogsci-skilllib",
+  "description": "Standards-first cognitive-science agent skills scaffold for reproducible research workflows.",
+  "codeRepository": "https://github.com/REPLACE_WITH_ORG/cogsci-skilllib",
+  "version": "0.1.0-alpha",
+  "programmingLanguage": ["Python"],
+  "license": "TBD",
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "REPLACE_WITH_GIVEN_NAME",
+      "familyName": "REPLACE_WITH_FAMILY_NAME"
+    }
+  ],
+  "keywords": [
+    "cognitive science",
+    "reproducibility",
+    "open science",
+    "agent skills",
+    "BIDS",
+    "Psych-DS"
+  ]
+}

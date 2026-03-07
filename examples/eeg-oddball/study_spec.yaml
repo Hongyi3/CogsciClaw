@@ -1,0 +1,38 @@
+study:
+  title: "Auditory oddball — EEG vertical slice"
+  research_question: "How do target and standard tones differ in event-related responses?"
+  hypotheses:
+    - "Target tones will elicit larger target-related ERP components than standard tones."
+
+design:
+  task_name: "auditory_oddball"
+  conditions:
+    - standard
+    - target
+  trial_count: 300
+  randomization: "pseudo-random sequence with no more than 3 targets in a row"
+  counterbalancing: "not applicable"
+
+modality: eeg
+standards:
+  - BIDS
+  - HED
+  - MNE-BIDS
+  - MNE
+
+participants:
+  target_n: 24
+  inclusion_criteria:
+    - "18+"
+    - "no uncorrected hearing impairment"
+
+outputs:
+  task_package: false
+  curated_dataset: true
+  model_report: false
+  preregistration: true
+  reproducibility_bundle: true
+
+ethics:
+  contains_sensitive_data: true
+  notes: "Real runs require local privacy review and data-handling controls."

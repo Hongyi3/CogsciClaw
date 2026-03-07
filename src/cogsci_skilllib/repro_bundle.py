@@ -16,13 +16,18 @@ from .paths import SCHEMAS_DIR
 from .version import __version__
 
 
-UNSUPPORTED_CAPABILITIES = [
-    "HED annotation and HED validation",
+PREREGISTRATION_ARTIFACT = "report/preregistration/preregistration.json"
+RUN_MANIFEST_ARTIFACT = "report/provenance/run_manifest.json"
+RO_CRATE_ARTIFACT = "report/provenance/ro-crate-metadata.json"
+PROV_ARTIFACT = "report/provenance/prov.jsonld"
+CHECKSUMS_ARTIFACT = "report/checksums.sha256"
+
+BASE_UNSUPPORTED_CAPABILITIES = [
     "Cognitive Atlas mappings",
-    "Bayesian and drift-diffusion modeling",
-    "preregistration exports",
-    "RO-Crate packaging",
-    "PROV packaging",
+    "drift-diffusion model fitting beyond runtime probing",
+    "registry or API preregistration submission",
+    "validator-backed RO-Crate / PROV conformance claims",
+    "figures and tables",
     "arbitrary behavioral study specifications beyond the canonical Flanker demo",
 ]
 
@@ -52,9 +57,16 @@ def environment_lock() -> Dict[str, Any]:
             "platform": platform.platform(),
         },
         "packages": {
+            "arviz": package_version("arviz"),
             "cogsci-skilllib": __version__,
+            "hedtools": package_version("hedtools"),
+            "hddm": package_version("hddm"),
             "jsonschema": package_version("jsonschema"),
+            "numpy": package_version("numpy"),
+            "pandas": package_version("pandas"),
             "PyYAML": package_version("PyYAML"),
+            "pymc": package_version("pymc"),
+            "scipy": package_version("scipy"),
         },
     }
 
@@ -69,12 +81,100 @@ OUTPUT_DIR="${OUTPUT_DIR:-output/flanker-behavioral}"
 "${PYTHON_BIN}" scripts/run_flanker_behavioral_slice.py \
   --study-spec examples/flanker-behavioral/study_spec.yaml \
   --output-dir "${OUTPUT_DIR}" \
-  --validate-psychds auto
+  --validate-psychds auto \
+  --validate-hed auto \
+  --fit-bayes auto \
+  --fit-ddm auto
 
 if command -v validate >/dev/null 2>&1; then
   validate "${OUTPUT_DIR}/psychds" --json > "${OUTPUT_DIR}/report/validation/psychds-validator.json"
 fi
 """
+
+
+def _status_line(summary: Dict[str, Any]) -> str:
+    line = summary["status"]
+    if summary.get("reason"):
+        line = f"{line} ({summary['reason']})"
+    return line
+
+
+def _unsupported_capabilities(modeling_metadata: Dict[str, Any]) -> List[str]:
+    capabilities = list(BASE_UNSUPPORTED_CAPABILITIES)
+    if modeling_metadata["bayesian"]["status"] != "passed":
+        capabilities.insert(
+            1,
+            "Bayesian model execution on machines without a working PyMC / ArviZ runtime",
+        )
+    return capabilities
+
+
+def _source_ref(path: str, field: str) -> Dict[str, str]:
+    return {
+        "path": path,
+        "field": field,
+    }
+
+
+def _human_review_points(study_spec_reference: str) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": "ethics_privacy_review",
+            "reason": (
+                "Real study deployment still requires local ethics and privacy review even though "
+                "this bundle contains only deterministic synthetic-demo data."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "ethics.notes"),
+                _source_ref("METHODS_POLICY.md", "Human review remains mandatory where needed"),
+            ],
+        },
+        {
+            "id": "task_validity_timing_review",
+            "reason": (
+                "Task validity, timing, and response-mapping assumptions still require human "
+                "methods review before non-demo use."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "design"),
+                _source_ref("METHODS_POLICY.md", "Human review remains mandatory where needed"),
+            ],
+        },
+        {
+            "id": "participant_eligibility_exclusion_review",
+            "reason": (
+                "Eligibility and exclusion procedures remain human decisions; this demo bundle "
+                "records target enrollment and inclusion criteria but does not operationalize "
+                "screening or exclusion handling."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "participants"),
+                _source_ref("METHODS_POLICY.md", "Human review remains mandatory where needed"),
+            ],
+        },
+        {
+            "id": "construct_mapping_review",
+            "reason": (
+                "Construct mapping still requires human review because `Cognitive Atlas` remains "
+                "an unsupported requested standard in this milestone."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "standards"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_requested_standards"),
+            ],
+        },
+        {
+            "id": "empirical_registration_completion",
+            "reason": (
+                "This artifact is a local synthetic-demo preregistration export, not a completed "
+                "registry submission for an empirical study."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "outputs.preregistration"),
+                _source_ref("METHODS_POLICY.md", "Human review remains mandatory where needed"),
+            ],
+        },
+    ]
 
 
 def build_run_manifest(
@@ -84,8 +184,11 @@ def build_run_manifest(
     demo_profile: Dict[str, Any],
     schedule_summary: Dict[str, Any],
     task_metadata: Dict[str, Any],
+    hed_metadata: Dict[str, Any],
     psychds_metadata: Dict[str, Any],
+    modeling_metadata: Dict[str, Any],
     study_validation: Dict[str, Any],
+    hed_validation_summary: Dict[str, Any],
     psychds_validation_summary: Dict[str, Any],
 ) -> Dict[str, Any]:
     return {
@@ -98,6 +201,11 @@ def build_run_manifest(
         },
         "supported_slice": {
             "name": "canonical-flanker-behavioral-demo",
+            "hed_annotation": True,
+            "model_artifacts": True,
+            "preregistration_export": True,
+            "ro_crate_export": True,
+            "prov_export": True,
             "task_generation": True,
             "psychds_curation": True,
             "reproducibility_bundle": True,
@@ -106,12 +214,23 @@ def build_run_manifest(
         "demo_profile": demo_profile,
         "trial_schedule": schedule_summary,
         "task_artifact": task_metadata,
+        "hed": hed_metadata,
         "psychds": psychds_metadata,
+        "modeling": modeling_metadata,
+        "preregistration": {
+            "artifact": PREREGISTRATION_ARTIFACT,
+        },
+        "provenance": {
+            "run_manifest": RUN_MANIFEST_ARTIFACT,
+            "ro_crate": RO_CRATE_ARTIFACT,
+            "prov": PROV_ARTIFACT,
+        },
         "validation": {
             "study_spec": {
                 "status": "passed" if study_validation["valid"] else "failed",
                 "schema": study_validation["schema"],
             },
+            "hed": hed_validation_summary,
             "psychds": psychds_validation_summary,
             "report_bundle": {
                 "status": "pending",
@@ -120,7 +239,205 @@ def build_run_manifest(
         },
         "unsupported_requested_outputs": study_validation["unsupported_requested_outputs"],
         "unsupported_requested_standards": study_validation["unsupported_requested_standards"],
-        "unsupported_capabilities": UNSUPPORTED_CAPABILITIES,
+        "unsupported_capabilities": _unsupported_capabilities(modeling_metadata),
+    }
+
+
+def build_preregistration_artifact(
+    normalized_spec: Dict[str, Any],
+    study_spec_reference: str,
+    study_spec_sha256: str,
+    run_manifest: Dict[str, Any],
+) -> Dict[str, Any]:
+    requested_outputs = normalized_spec.get("outputs", {})
+    participants = normalized_spec.get("participants", {})
+    modeling = run_manifest["modeling"]
+
+    supported_claims = [
+        {
+            "id": "canonical_synthetic_demo_scope",
+            "claim": (
+                "This artifact covers only the canonical synthetic-demo Flanker behavioral slice "
+                "implemented in this repository."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "study.title"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "supported_slice.name"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "demo_profile.synthetic_data"),
+            ],
+        },
+        {
+            "id": "local_preregistration_export_emitted",
+            "claim": (
+                "A deterministic local preregistration export was emitted from the normalized "
+                "study specification plus runtime metadata."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "outputs.preregistration"),
+                _source_ref(PREREGISTRATION_ARTIFACT, "artifact_type"),
+            ],
+        },
+        {
+            "id": "machine_readable_provenance_exports_emitted",
+            "claim": "Machine-readable RO-Crate and PROV provenance exports were emitted in the bundle.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "provenance.ro_crate"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "provenance.prov"),
+            ],
+        },
+        {
+            "id": "truthful_model_artifacts_emitted",
+            "claim": (
+                "Bayesian and DDM artifact files are emitted with runtime-derived status metadata "
+                "instead of silent scientific fallbacks."
+            ),
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "modeling.bayesian.status"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "modeling.ddm.status"),
+            ],
+        },
+    ]
+    if modeling["bayesian"]["status"] == "passed":
+        supported_claims.append(
+            {
+                "id": "bayesian_baseline_executed_on_this_runtime",
+                "claim": (
+                    "A real Bayesian baseline fit with diagnostics was executed on this runtime "
+                    "for the canonical synthetic Flanker slice."
+                ),
+                "source_refs": [
+                    _source_ref(RUN_MANIFEST_ARTIFACT, "modeling.bayesian.status"),
+                    _source_ref(
+                        RUN_MANIFEST_ARTIFACT,
+                        "modeling.bayesian.diagnostics_artifact",
+                    ),
+                ],
+            }
+        )
+
+    unsupported_claims = [
+        {
+            "id": "cognitive_atlas_mappings_unsupported",
+            "claim": "Cognitive Atlas construct mappings are not supported in this milestone.",
+            "reason": "The requested `Cognitive Atlas` standard is still outside the implemented slice.",
+            "source_refs": [
+                _source_ref(study_spec_reference, "standards"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_requested_standards"),
+            ],
+        },
+        {
+            "id": "ddm_fitting_not_supported",
+            "claim": "Drift-diffusion fitting beyond runtime probing is not supported in this milestone.",
+            "reason": "The DDM artifact remains a truthful runtime probe rather than a fitted model.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "modeling.ddm.status"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "modeling.ddm.reason"),
+            ],
+        },
+        {
+            "id": "registry_submission_not_supported",
+            "claim": "Registry or API preregistration submission is not supported in this milestone.",
+            "reason": "The bundle emits only a local deterministic export.",
+            "source_refs": [
+                _source_ref(PREREGISTRATION_ARTIFACT, "artifact_type"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+            ],
+        },
+        {
+            "id": "provenance_validation_not_supported",
+            "claim": "Validator-backed RO-Crate or PROV conformance claims are not supported in this milestone.",
+            "reason": "The bundle emits machine-readable provenance files without claiming external validation.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "provenance"),
+            ],
+        },
+        {
+            "id": "figures_tables_not_emitted",
+            "claim": "Figures and tables are not emitted in this milestone.",
+            "reason": "The current bundle contract remains limited to task, curation, modeling, report, preregistration, and provenance outputs.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+                _source_ref(study_spec_reference, "outputs"),
+            ],
+        },
+        {
+            "id": "arbitrary_study_specs_not_supported",
+            "claim": "Arbitrary behavioral study specifications are not supported in this milestone.",
+            "reason": "The supported profile remains the canonical Flanker behavioral demo only.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "supported_slice.name"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+            ],
+        },
+    ]
+    if modeling["bayesian"]["status"] != "passed":
+        unsupported_claims.append(
+            {
+                "id": "bayesian_execution_runtime_limited",
+                "claim": "Bayesian execution did not complete successfully on this runtime.",
+                "reason": (
+                    "Bayesian support remains runtime-sensitive and requires a healthy local "
+                    "PyMC / ArviZ environment."
+                ),
+                "source_refs": [
+                    _source_ref(RUN_MANIFEST_ARTIFACT, "modeling.bayesian.status"),
+                    _source_ref(RUN_MANIFEST_ARTIFACT, "modeling.bayesian.reason"),
+                ],
+            }
+        )
+
+    return {
+        "artifact_type": "cogsci-skilllib-preregistration-demo",
+        "supported_profile": run_manifest["supported_slice"]["name"],
+        "synthetic_demo": True,
+        "study_spec": {
+            "path": study_spec_reference,
+            "sha256": study_spec_sha256,
+            "schema": run_manifest["validation"]["study_spec"]["schema"],
+        },
+        "study": {
+            "title": normalized_spec["study"]["title"],
+            "research_question": normalized_spec["study"]["research_question"],
+            "hypotheses": normalized_spec["study"].get("hypotheses", []),
+            "modality": normalized_spec["modality"],
+        },
+        "design": {
+            "task_name": normalized_spec["design"]["task_name"],
+            "conditions": normalized_spec["design"]["conditions"],
+            "trial_count": normalized_spec["design"]["trial_count"],
+            "randomization": normalized_spec["design"]["randomization"],
+            "counterbalancing": normalized_spec["design"]["counterbalancing"],
+            "implemented_trial_schedule": run_manifest["trial_schedule"],
+        },
+        "participants": {
+            "target_n": participants.get("target_n"),
+            "inclusion_criteria": participants.get("inclusion_criteria", []),
+            "synthetic_demo_participants": run_manifest["demo_profile"]["participants"],
+        },
+        "requested_outputs": {
+            "requested": requested_outputs,
+            "unsupported_requested_outputs": run_manifest["unsupported_requested_outputs"],
+            "unsupported_requested_standards": run_manifest["unsupported_requested_standards"],
+        },
+        "implemented_analysis_contract": {
+            "synthetic_demo_only": True,
+            "confirmatory_hypotheses": normalized_spec["study"].get("hypotheses", []),
+            "bayesian_baseline": {
+                "status": modeling["bayesian"]["status"],
+                "models": modeling["bayesian"].get("models", []),
+                "condition_effects_artifact": modeling["bayesian"]["condition_effects_artifact"],
+                "diagnostics_artifact": modeling["bayesian"]["diagnostics_artifact"],
+            },
+            "ddm_runtime_probe": {
+                "status": modeling["ddm"]["status"],
+                "artifact": modeling["ddm"]["artifact"],
+                "reason": modeling["ddm"].get("reason"),
+            },
+        },
+        "supported_claims": supported_claims,
+        "unsupported_claims": unsupported_claims,
+        "required_human_review": _human_review_points(study_spec_reference),
     }
 
 
@@ -139,13 +456,17 @@ def methods_markdown(
     timings = run_manifest["demo_profile"]["timing_ms"]
     unsupported_outputs = ", ".join(run_manifest["unsupported_requested_outputs"]) or "none"
     unsupported_standards = ", ".join(run_manifest["unsupported_requested_standards"]) or "none"
+    hed_metadata = run_manifest["hed"]
+    modeling = run_manifest["modeling"]
+    preregistration_artifact = run_manifest["preregistration"]["artifact"]
+    provenance = run_manifest["provenance"]
 
     return """# Methods
 
 ## Input and scope
 
 This run used the study specification `{study_spec_reference}` (SHA-256 `{study_spec_sha256}`) for the study "{study_title}".
-The implemented slice supports only the canonical behavioral Flanker demo path: jsPsych task generation, deterministic synthetic demo data generation, Psych-DS-aligned curation, and reproducibility bundle assembly.
+The implemented slice supports only the canonical behavioral Flanker demo path: jsPsych task generation, deterministic synthetic demo data generation, HED event annotation, Psych-DS-aligned curation, deterministic model artifacts, and reproducibility bundle assembly.
 
 ## Task generation
 
@@ -157,12 +478,27 @@ The task used fixation {fixation} ms, response deadline {deadline} ms, and inter
 
 The curated dataset is synthetic and deterministic; it is present only to exercise curation and reproducibility paths in CI and local demo runs.
 Two synthetic participants were generated: {participants}.
-No practice block, feedback block, adaptive logic, empirical recruitment, or inferential modeling was run in this milestone.
+No practice block, feedback block, adaptive logic, empirical recruitment, or empirical participant-data interpretation was run in this milestone.
+
+## Event annotation
+
+HED-oriented event artifacts were written under `events/` as one shared sidecar and two participant event tables with two rows per trial (stimulus and response).
+The event annotations were derived from deterministic runtime metadata plus the checked-in Flanker mapping rules in `{hed_mapping_rules}` and targeted the vendored HED schema `{hed_schema_path}` (version {hed_schema_version}).
+
+## Modeling
+
+Deterministic model input rows were written to `{model_input}` from the synthetic trial tables.
+The supported Bayesian analysis contract targets two trial-level models with participant intercepts and a condition effect: a Bernoulli-logit model for accuracy and a Normal model on `log_rt_seconds` for correct trials only.
+Bayesian fitting status: {bayesian_status}.
+Bayesian diagnostics artifact: `{bayesian_diagnostics}`.
+DDM status: {ddm_status}.
+DDM status artifact: `{ddm_artifact}`.
 
 ## Curation and validation
 
 Trial tables were written into a Psych-DS-aligned dataset under `psychds/data/` with matching sidecar metadata and a global `dataset_description.json`.
 Study-spec validation status: {study_status}.
+HED validation status: {hed_status}.
 Psych-DS validator status: {psychds_status}.
 
 ## Unsupported requests and standards
@@ -170,10 +506,11 @@ Psych-DS validator status: {psychds_status}.
 Unsupported requested outputs for this study spec: {unsupported_outputs}.
 Unsupported requested standards for this study spec: {unsupported_standards}.
 Unsupported capabilities still deferred in this milestone: {unsupported_capabilities}.
+Required human review points remain explicit in `{preregistration_artifact}`: ethics/privacy review, task validity/timing review, participant eligibility/exclusion confirmation, construct mapping review, and empirical-registration completion before non-demo use.
 
 ## Reproducibility artifacts
 
-The bundle includes a machine-readable manifest, commands script, environment snapshot, checksums, study-spec validation, report-bundle validation, and a run manifest derived from runtime metadata.
+The bundle includes a machine-readable manifest, commands script, environment snapshot, checksums, study-spec validation, report-bundle validation, run manifest, preregistration export `{preregistration_artifact}`, RO-Crate metadata `{ro_crate}`, and PROV JSON-LD metadata `{prov}`.
 """.format(
         study_spec_reference=study_spec_reference,
         study_spec_sha256=study_spec_sha256,
@@ -189,11 +526,23 @@ The bundle includes a machine-readable manifest, commands script, environment sn
         deadline=timings["response_deadline"],
         iti=timings["inter_trial_interval"],
         participants=participants,
+        hed_mapping_rules=hed_metadata["mapping_rules"],
+        hed_schema_path=hed_metadata["schema_path"],
+        hed_schema_version=hed_metadata["schema_version"],
+        model_input=modeling["input_file"],
+        bayesian_status=_status_line(modeling["bayesian"]),
+        bayesian_diagnostics=modeling["bayesian"]["diagnostics_artifact"],
+        ddm_status=_status_line(modeling["ddm"]),
+        ddm_artifact=modeling["ddm"]["artifact"],
         study_status=run_manifest["validation"]["study_spec"]["status"],
-        psychds_status=run_manifest["validation"]["psychds"]["status"],
+        hed_status=_status_line(run_manifest["validation"]["hed"]),
+        psychds_status=_status_line(run_manifest["validation"]["psychds"]),
         unsupported_outputs=unsupported_outputs,
         unsupported_standards=unsupported_standards,
         unsupported_capabilities=", ".join(run_manifest["unsupported_capabilities"]),
+        preregistration_artifact=preregistration_artifact,
+        ro_crate=provenance["ro_crate"],
+        prov=provenance["prov"],
     )
 
 
@@ -203,12 +552,24 @@ def report_markdown(
 ) -> str:
     unsupported_outputs = run_manifest["unsupported_requested_outputs"]
     unsupported_standards = run_manifest["unsupported_requested_standards"]
+    modeling = run_manifest["modeling"]
     return """# Flanker Behavioral Slice Report
 
 - Study spec: `{study_spec_reference}`
-- Supported path executed: jsPsych task package, deterministic synthetic demo data, Psych-DS-aligned curation, reproducibility bundle
+- Supported path executed: jsPsych task package, deterministic synthetic demo data, HED event annotation, Psych-DS-aligned curation, deterministic model artifacts, preregistration export, provenance packaging, reproducibility bundle
 - Trial count per participant: {trial_count}
 - Condition counts: {condition_counts}
+- HED event sidecar: {hed_sidecar}
+- HED participant event tables: {hed_event_tables}
+- HED validation status: {hed_status}
+- Model input artifact: {model_input}
+- Bayesian condition-effects artifact: {bayesian_condition_effects}
+- Bayesian diagnostics status: {bayesian_status}
+- DDM status: {ddm_status}
+- Preregistration artifact: {preregistration_artifact}
+- RO-Crate metadata: {ro_crate}
+- PROV JSON-LD: {prov}
+- Required human review points: ethics/privacy review, task validity/timing review, participant eligibility/exclusion confirmation, construct mapping review, empirical-registration completion
 - Psych-DS validation status: {psychds_status}
 - Unsupported requested outputs: {unsupported_outputs}
 - Unsupported requested standards: {unsupported_standards}
@@ -222,31 +583,57 @@ This report summarizes what actually ran. Synthetic data is labeled synthetic th
             "{0}={1}".format(key, value)
             for key, value in run_manifest["trial_schedule"]["condition_counts"].items()
         ),
-        psychds_status=run_manifest["validation"]["psychds"]["status"],
+        hed_sidecar=run_manifest["hed"]["sidecar"],
+        hed_event_tables=", ".join(run_manifest["hed"]["participant_event_files"]),
+        hed_status=_status_line(run_manifest["validation"]["hed"]),
+        model_input=modeling["input_file"],
+        bayesian_condition_effects=modeling["bayesian"]["condition_effects_artifact"],
+        bayesian_status=_status_line(modeling["bayesian"]),
+        ddm_status=_status_line(modeling["ddm"]),
+        preregistration_artifact=run_manifest["preregistration"]["artifact"],
+        ro_crate=run_manifest["provenance"]["ro_crate"],
+        prov=run_manifest["provenance"]["prov"],
+        psychds_status=_status_line(run_manifest["validation"]["psychds"]),
         unsupported_outputs=", ".join(unsupported_outputs) or "none",
         unsupported_standards=", ".join(unsupported_standards) or "none",
         unsupported_capabilities=", ".join(run_manifest["unsupported_capabilities"]),
     )
 
 
-def report_bundle_manifest() -> Dict[str, Any]:
+def report_bundle_manifest(
+    hed_metadata: Dict[str, Any],
+    modeling_metadata: Dict[str, Any],
+) -> Dict[str, Any]:
     return {
         "report": "report/report.md",
         "methods": "report/methods.md",
         "commands": "report/commands.sh",
         "environment": "report/environment.lock.yml",
         "checksums": "report/checksums.sha256",
+        "events": {
+            "sidecar": hed_metadata["sidecar"],
+            "tables": hed_metadata["participant_event_files"],
+        },
+        "model": {
+            "input": modeling_metadata["input_file"],
+            "manifest": modeling_metadata["manifest"],
+            "bayesian_condition_effects": modeling_metadata["bayesian_condition_effects"],
+            "bayesian_diagnostics": modeling_metadata["bayesian_diagnostics"],
+            "ddm_status": modeling_metadata["ddm_status"],
+        },
         "validation": {
             "psychds": "report/validation/psychds-validator.json",
             "bids": None,
-            "hed": None,
+            "hed": "report/validation/hed-validator.json",
         },
         "provenance": {
-            "ro_crate": None,
-            "prov": None,
+            "ro_crate": RO_CRATE_ARTIFACT,
+            "prov": PROV_ARTIFACT,
         },
-        "preregistration": None,
-        "run_manifest": "report/provenance/run_manifest.json",
+        "preregistration": {
+            "artifact": PREREGISTRATION_ARTIFACT,
+        },
+        "run_manifest": RUN_MANIFEST_ARTIFACT,
     }
 
 
@@ -278,11 +665,187 @@ def iter_output_files(output_root: Path) -> Iterable[Path]:
             yield file_path
 
 
+def expected_bundle_artifacts(output_root: Path) -> List[str]:
+    artifacts = {file_path.relative_to(output_root).as_posix() for file_path in iter_output_files(output_root)}
+    artifacts.update({CHECKSUMS_ARTIFACT, RO_CRATE_ARTIFACT, PROV_ARTIFACT})
+    return sorted(artifacts)
+
+
+def _encoding_format(path: str) -> str:
+    suffix = Path(path).suffix.lower()
+    return {
+        ".css": "text/css",
+        ".csv": "text/csv",
+        ".html": "text/html",
+        ".json": "application/json",
+        ".jsonld": "application/ld+json",
+        ".js": "text/javascript",
+        ".md": "text/markdown",
+        ".sh": "text/x-shellscript",
+        ".tsv": "text/tab-separated-values",
+        ".xml": "application/xml",
+        ".yml": "application/yaml",
+        ".yaml": "application/yaml",
+    }.get(suffix, "application/octet-stream")
+
+
+def _relation_id(prefix: str, value: str) -> str:
+    return "#{prefix}-{value}".format(
+        prefix=prefix,
+        value=value.replace("/", "-").replace(".", "-").replace("_", "-"),
+    )
+
+
+def build_ro_crate_metadata(
+    study_title: str,
+    study_spec_reference: str,
+    study_spec_sha256: str,
+    expected_files: List[str],
+) -> Dict[str, Any]:
+    graph: List[Dict[str, Any]] = [
+        {
+            "@id": RO_CRATE_ARTIFACT,
+            "@type": "CreativeWork",
+            "name": "RO-Crate metadata descriptor for the canonical Flanker behavioral demo bundle",
+            "about": {"@id": "./"},
+            "conformsTo": {"@id": "https://w3id.org/ro/crate/1.2"},
+            "encodingFormat": "application/ld+json",
+        },
+        {
+            "@id": "./",
+            "@type": "Dataset",
+            "name": "{title} reproducibility bundle".format(title=study_title),
+            "description": (
+                "Deterministic synthetic-demo Flanker behavioral slice bundle with local "
+                "preregistration and machine-readable provenance exports."
+            ),
+            "hasPart": [{"@id": path} for path in expected_files],
+            "isBasedOn": {"@id": "#study-spec"},
+            "mentions": [{"@id": "#runner-software"}, {"@id": "#runner-script"}],
+        },
+        {
+            "@id": "https://w3id.org/ro/crate/1.2",
+            "@type": "CreativeWork",
+            "name": "RO-Crate 1.2",
+        },
+        {
+            "@id": "#study-spec",
+            "@type": "File",
+            "name": study_spec_reference,
+            "description": "Checked-in study specification used to generate this bundle.",
+            "encodingFormat": "application/yaml",
+            "sha256": study_spec_sha256,
+        },
+        {
+            "@id": "#runner-software",
+            "@type": "SoftwareApplication",
+            "name": "cogsci-skilllib",
+            "version": __version__,
+        },
+        {
+            "@id": "#runner-script",
+            "@type": "SoftwareSourceCode",
+            "name": "scripts/run_flanker_behavioral_slice.py",
+            "programmingLanguage": "Python",
+            "isPartOf": {"@id": "#runner-software"},
+        },
+    ]
+
+    for path in expected_files:
+        if path == RO_CRATE_ARTIFACT:
+            continue
+        graph.append(
+            {
+                "@id": path,
+                "@type": "File",
+                "name": path,
+                "encodingFormat": _encoding_format(path),
+            }
+        )
+
+    return {
+        "@context": "https://w3id.org/ro/crate/1.2/context",
+        "@graph": graph,
+    }
+
+
+def build_prov_jsonld(
+    study_spec_reference: str,
+    study_spec_sha256: str,
+    expected_files: List[str],
+) -> Dict[str, Any]:
+    entities: Dict[str, Dict[str, Any]] = {
+        "#study-spec": {
+            "prov:type": "Entity",
+            "name": study_spec_reference,
+            "encodingFormat": "application/yaml",
+            "sha256": study_spec_sha256,
+        }
+    }
+    was_generated_by: Dict[str, Dict[str, str]] = {}
+    was_attributed_to: Dict[str, Dict[str, str]] = {}
+
+    for path in expected_files:
+        entities[path] = {
+            "prov:type": "Entity",
+            "path": path,
+            "encodingFormat": _encoding_format(path),
+        }
+        was_generated_by[_relation_id("wasGeneratedBy", path)] = {
+            "prov:entity": path,
+            "prov:activity": "#bundle-run",
+        }
+        was_attributed_to[_relation_id("wasAttributedTo", path)] = {
+            "prov:entity": path,
+            "prov:agent": "#cogsci-skilllib-agent",
+        }
+
+    return {
+        "@context": [
+            "https://openprovenance.org/prov-jsonld/context.jsonld",
+            {
+                "name": "https://schema.org/name",
+                "path": "https://schema.org/path",
+                "encodingFormat": "https://schema.org/encodingFormat",
+                "sha256": "https://w3id.org/ro/terms#sha256",
+            },
+        ],
+        "entity": entities,
+        "activity": {
+            "#bundle-run": {
+                "prov:type": "Activity",
+                "name": "Canonical Flanker behavioral demo bundle assembly",
+            }
+        },
+        "agent": {
+            "#cogsci-skilllib-agent": {
+                "prov:type": "SoftwareAgent",
+                "name": "cogsci-skilllib",
+                "version": __version__,
+            }
+        },
+        "used": {
+            "#used-study-spec": {
+                "prov:activity": "#bundle-run",
+                "prov:entity": "#study-spec",
+            }
+        },
+        "wasGeneratedBy": was_generated_by,
+        "wasAttributedTo": was_attributed_to,
+        "wasAssociatedWith": {
+            "#bundle-association": {
+                "prov:activity": "#bundle-run",
+                "prov:agent": "#cogsci-skilllib-agent",
+            }
+        },
+    }
+
+
 def write_checksums(output_root: Path, checksums_path: Path) -> None:
     lines: List[str] = []
     for file_path in iter_output_files(output_root):
         relative_path = file_path.relative_to(output_root)
-        if relative_path == Path("report/checksums.sha256"):
+        if relative_path == Path(CHECKSUMS_ARTIFACT):
             continue
         digest = sha256(file_path.read_bytes()).hexdigest()
         lines.append("{digest}  {path}".format(digest=digest, path=relative_path.as_posix()))

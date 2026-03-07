@@ -15,9 +15,11 @@ from .paths import SCHEMAS_DIR
 SUPPORTED_OUTPUTS = {
     "task_package",
     "curated_dataset",
+    "model_report",
+    "preregistration",
     "reproducibility_bundle",
 }
-SUPPORTED_STANDARDS = {"Psych-DS"}
+SUPPORTED_STANDARDS = {"Psych-DS", "HED"}
 
 
 @dataclass(frozen=True)

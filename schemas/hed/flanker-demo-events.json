@@ -1,0 +1,128 @@
+{
+  "schema_path": "schemas/hed/HED8.4.0.xml",
+  "schema_version": "8.4.0",
+  "supported_profile": "canonical-flanker-demo",
+  "event_types": {
+    "stimulus": {
+      "description": "Stimulus-presentation event for a canonical Flanker trial.",
+      "hed_prefix": "Sensory-event, Experimental-trial, Task-property/Task-event-role/Experimental-stimulus, Visual-presentation"
+    },
+    "response": {
+      "description": "Participant keyboard response event for a canonical Flanker trial.",
+      "hed_prefix": "Agent-action, Participant-response, Press, Keyboard-key"
+    }
+  },
+  "condition_tags": {
+    "congruent": "Congruent",
+    "incongruent": "Incongruent"
+  },
+  "direction_tags": {
+    "left": "Leftward",
+    "right": "Rightward"
+  },
+  "accuracy_tags": {
+    "correct": "Correct-action",
+    "incorrect": "Incorrect-action"
+  },
+  "trial_type_tags": {
+    "congruent-left": "Congruent, Arrow, Leftward",
+    "congruent-right": "Congruent, Arrow, Rightward",
+    "incongruent-left": "Incongruent, Arrow, Leftward, (Arrow, Rightward)",
+    "incongruent-right": "Incongruent, Arrow, Rightward, (Arrow, Leftward)"
+  },
+  "sidecar": {
+    "onset": {
+      "Description": "Event onset in seconds relative to the synthetic participant-local task start.",
+      "Units": "s"
+    },
+    "duration": {
+      "Description": "Event duration in seconds. Stimulus rows use the deterministic synthetic RT; response rows are instantaneous.",
+      "Units": "s"
+    },
+    "trial_index": {
+      "Description": "One-based index of the originating Flanker trial within the deterministic schedule."
+    },
+    "event_type": {
+      "Description": "Whether the row represents a stimulus presentation or a participant response event.",
+      "Levels": {
+        "response": "Participant keyboard response event.",
+        "stimulus": "Visual Flanker stimulus presentation event."
+      }
+    },
+    "condition": {
+      "Description": "Congruent or incongruent condition label inherited from the canonical Flanker trial.",
+      "Levels": {
+        "congruent": "Congruent Flanker trial.",
+        "incongruent": "Incongruent Flanker trial."
+      }
+    },
+    "trial_type": {
+      "Description": "Canonical Flanker subtype combining congruency and target direction.",
+      "Levels": {
+        "congruent-left": "Congruent trial with leftward target direction.",
+        "congruent-right": "Congruent trial with rightward target direction.",
+        "incongruent-left": "Incongruent trial with leftward target direction.",
+        "incongruent-right": "Incongruent trial with rightward target direction."
+      }
+    },
+    "stimulus": {
+      "Description": "Rendered arrow string for the trial. Present on stimulus rows and repeated on response rows for provenance."
+    },
+    "target_direction": {
+      "Description": "Direction of the central target arrow.",
+      "Levels": {
+        "left": "Leftward target arrow.",
+        "right": "Rightward target arrow."
+      }
+    },
+    "flanker_direction": {
+      "Description": "Direction of the surrounding flanker arrows.",
+      "Levels": {
+        "left": "Leftward flanker arrows.",
+        "right": "Rightward flanker arrows."
+      }
+    },
+    "correct_direction": {
+      "Description": "Correct conceptual response direction for the target arrow.",
+      "Levels": {
+        "left": "Correct response direction is leftward.",
+        "right": "Correct response direction is rightward."
+      }
+    },
+    "response_direction": {
+      "Description": "Direction implied by the observed synthetic response key. Blank on stimulus rows.",
+      "Levels": {
+        "left": "Synthetic response maps to a leftward response.",
+        "right": "Synthetic response maps to a rightward response."
+      }
+    },
+    "correct_response_key": {
+      "Description": "Keyboard key mapped to the correct response direction for the participant."
+    },
+    "response_key": {
+      "Description": "Synthetic keyboard key emitted for the demo dataset. Blank on stimulus rows."
+    },
+    "accuracy": {
+      "Description": "Deterministic synthetic correctness indicator from the originating trial table. Blank on stimulus rows."
+    },
+    "accuracy_label": {
+      "Description": "Categorical correctness label used to derive response-event HED tags. Blank on stimulus rows.",
+      "Levels": {
+        "correct": "Correct synthetic response.",
+        "incorrect": "Incorrect synthetic response."
+      }
+    },
+    "mapping_variant": {
+      "Description": "Response-mapping variant for the synthetic participant."
+    },
+    "synthetic": {
+      "Description": "Literal indicator that the event row is synthetic demo data.",
+      "Levels": {
+        "true": "Synthetic deterministic demo event."
+      }
+    },
+    "HED": {
+      "Description": "Row-specific HED string derived from deterministic runtime metadata and checked-in Flanker mapping rules."
+    }
+  }
+}

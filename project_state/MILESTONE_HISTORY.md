@@ -1,0 +1,13 @@
+# Milestone History
+
+This file records milestone advances when they are justified by the repository state.
+
+Bootstrap entries below were recorded on 2026-03-07 during project-state initialization. The recorded date is the bootstrap date, not a reconstructed historical completion date.
+
+| Milestone | Title | Phase | Status | Recorded on | Basis |
+|---|---|---|---|---|---|
+| P0 | charter and repository foundation | Phase 0 | completed | 2026-03-07 | Recorded complete during project-state bootstrap based on the presence of top-level governance docs, `skills/catalog.json`, `scripts/render_skill_catalog.py`, CI, and the Codex review workflow. |
+| M1A | deterministic Flanker behavioral slice | Phase 1 | completed | 2026-03-07 | Recorded complete during project-state bootstrap based on `scripts/run_flanker_behavioral_slice.py`, the supported-demo implementations for `task-jspsych`, `psychds-curator`, and `repro-bundle`, and passing Flanker slice tests. |
+| M1B | HED annotation and validation for Flanker | Phase 1 | completed | 2026-03-07 | Completed based on deterministic `events/` artifacts from `src/cogsci_skilllib/hed_annotator.py`, truthful `hed-validator.json` fallback semantics in the canonical runner, promoted `hed-annotator` docs/catalog status, and passing verification (`pytest -q`, canonical Flanker run, catalog sync check). |
+| M1C | Bayesian / DDM analysis with diagnostics and methods text | Phase 1 | completed | 2026-03-07 | Completed based on verified Bayesian execution for the canonical Flanker slice under a repo-local Python 3.14 environment (`.venv/bin/python` with `pymc 5.28.1` and `arviz 0.23.4`), real diagnostics in `model/bayesian-diagnostics.json`, honest DDM `not_run` runtime-probe semantics, promoted `ddm-bayes` skill/docs metadata, and passing verification (`pytest -q`, `.venv/bin/python -m pytest -q`, canonical fallback run, canonical supported-runtime run, catalog render/check). |
+| M1D | preregistration and provenance packaging for the Flanker slice | Phase 1 | completed | 2026-03-07 | Completed based on deterministic `report/preregistration/preregistration.json`, `report/provenance/ro-crate-metadata.json`, and `report/provenance/prov.jsonld`; updated report-bundle schema/tests/docs; truthful retention of `unsupported_requested_standards = ["Cognitive Atlas"]`; and passing verification (`pytest -q`, `.venv/bin/python -m pytest -q`, canonical supported-runtime run, catalog render/check). |

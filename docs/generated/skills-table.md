@@ -6,7 +6,7 @@
 | `task-psychopy` | scaffold | v1 | behavior | Psych-DS, HED, Cognitive Atlas | Generate lab-based or hybrid PsychoPy task packages from a structured study specification. |
 | `psychds-curator` | supported-demo | v1 | curation | Psych-DS | Curate the deterministic Flanker demo trial tables into a Psych-DS-aligned dataset with optional official validator output. |
 | `bids-curator` | scaffold | v1 | curation | BIDS | Prepare BIDS-compatible dataset structure and metadata for EEG/MEG-focused workflows. |
-| `hed-annotator` | scaffold | v1 | annotation | HED, BIDS | Map task events to HED strings and emit validation outputs for event semantics. |
-| `ddm-bayes` | scaffold | v1 | modeling | PyMC, HDDM, ArviZ | Fit Bayesian and hierarchical drift-diffusion models with diagnostics and posterior predictive checks. |
+| `hed-annotator` | supported-demo | v1 | annotation | HED | Generate deterministic HED event tables and optional local hedtools validation artifacts for the canonical Flanker behavioral demo. |
+| `ddm-bayes` | supported-demo | v1 | modeling | PyMC, HDDM, ArviZ | Emit deterministic model artifacts, fit a supported Bayesian baseline with diagnostics on healthy local runtimes, and record honest DDM runtime-probe status for the canonical Flanker demo. |
 | `eeg-meg-pipeline` | scaffold | v1.1 | neuro | BIDS, MNE-BIDS, MNE, HED | Orchestrate EEG/MEG intake and preprocessing with MNE-BIDS and MNE-Python. |
-| `repro-bundle` | supported-demo | v1 | reproducibility | JSON Schema | Assemble the deterministic Flanker demo reproducibility bundle with manifest, methods, commands, environment, checksums, and validation artifacts. |
+| `repro-bundle` | supported-demo | v1 | reproducibility | JSON Schema, RO-Crate, PROV | Assemble the deterministic Flanker demo reproducibility bundle with preregistration export, RO-Crate / PROV packaging, manifest, methods, commands, environment, checksums, and validation artifacts. |

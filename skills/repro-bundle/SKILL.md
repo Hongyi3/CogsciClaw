@@ -1,6 +1,6 @@
 ---
 name: repro-bundle
-description: Assemble the deterministic Flanker demo reproducibility bundle with manifest, methods, commands, environment, checksums, and validation artifacts.
+description: Assemble the deterministic Flanker demo reproducibility bundle with preregistration export, RO-Crate / PROV packaging, manifest, methods, commands, environment, checksums, and validation artifacts.
 version: 0.1.0
 status: supported-demo
 tags:
@@ -15,6 +15,8 @@ modality:
   - neurophysiology
 standards:
   - JSON Schema
+  - RO-Crate
+  - PROV
 trigger_keywords:
   - reproducibility bundle
   - report bundle
@@ -39,13 +41,14 @@ A workflow is not reproducible merely because it ran once. This skill should con
 - runtime-derived methods text for the canonical Flanker demo slice
 - command capture, environment capture, checksum generation, and validation artifact collection
 - machine-readable run manifest for the implemented demo slice
+- deterministic preregistration export for the canonical Flanker demo slice
+- machine-readable RO-Crate and PROV packaging for the emitted bundle
 
 ## Unsupported or deferred cases
 
 - claims of perfect reproducibility when upstream steps are stochastic and not controlled
-- RO-Crate packaging
-- PROV packaging
-- preregistration exports
+- registry or API preregistration submission
+- validator-backed RO-Crate / PROV conformance claims
 - figures and tables
 - multi-skill assembly beyond the canonical Flanker demo slice
 
@@ -59,10 +62,10 @@ A workflow is not reproducible merely because it ran once. This skill should con
 
 ## Workflow
 
-1. Collect the generated task, metadata, and Psych-DS demo outputs.
-2. Build a machine-readable report bundle manifest and a machine-readable run manifest.
-3. Emit runtime-derived `report.md`, `methods.md`, `commands.sh`, `environment.lock.yml`, and `checksums.sha256`.
-4. Record explicit unsupported capabilities instead of silently omitting them.
+1. Collect the generated task, metadata, model, and Psych-DS demo outputs.
+2. Build a machine-readable report bundle manifest, a machine-readable run manifest, and a deterministic preregistration export.
+3. Emit runtime-derived `report.md`, `methods.md`, `commands.sh`, `environment.lock.yml`, `checksums.sha256`, and machine-readable RO-Crate / PROV metadata.
+4. Record explicit unsupported capabilities and required human review points instead of silently omitting them.
 
 ## Validation
 
@@ -78,7 +81,10 @@ Run:
 python3 scripts/run_flanker_behavioral_slice.py \
   --study-spec examples/flanker-behavioral/study_spec.yaml \
   --output-dir output/flanker-behavioral \
-  --validate-psychds auto
+  --validate-psychds auto \
+  --validate-hed auto \
+  --fit-bayes auto \
+  --fit-ddm auto
 ```
 
 ## Outputs
@@ -92,7 +98,11 @@ output/
     ├── commands.sh
     ├── environment.lock.yml
     ├── checksums.sha256
+    ├── preregistration/
+    │   └── preregistration.json
     ├── provenance/
+    │   ├── ro-crate-metadata.json
+    │   ├── prov.jsonld
     │   └── run_manifest.json
     └── validation/
 ```
@@ -111,4 +121,5 @@ output/
 ## Citations
 
 - cite the report bundle schema in this repository
-- note explicitly that RO-Crate and PROV packaging remain deferred in this milestone
+- cite the RO-Crate and PROV references used for the emitted machine-readable packaging
+- note explicitly that validator-backed RO-Crate / PROV conformance claims and registry submission remain deferred in this milestone

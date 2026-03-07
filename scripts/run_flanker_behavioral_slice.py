@@ -22,14 +22,23 @@ from cogsci_skilllib.flanker_demo import (  # noqa: E402
     generate_synthetic_tables,
     summarize_schedule,
 )
+from cogsci_skilllib.ddm_bayes import write_model_artifacts  # noqa: E402
+from cogsci_skilllib.hed_annotator import (  # noqa: E402
+    run_hed_validator,
+    write_hed_events,
+)
 from cogsci_skilllib.psychds_curator import (  # noqa: E402
     run_psychds_validator,
     write_psychds_dataset,
 )
 from cogsci_skilllib.repro_bundle import (  # noqa: E402
+    build_preregistration_artifact,
+    build_prov_jsonld,
+    build_ro_crate_metadata,
     build_run_manifest,
     commands_script,
     environment_lock,
+    expected_bundle_artifacts,
     methods_markdown,
     report_bundle_manifest,
     report_markdown,
@@ -51,6 +60,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument(
         "--validate-psychds",
+        choices=("auto", "always", "never"),
+        default="auto",
+    )
+    parser.add_argument(
+        "--validate-hed",
+        choices=("auto", "always", "never"),
+        default="auto",
+    )
+    parser.add_argument(
+        "--fit-bayes",
+        choices=("auto", "always", "never"),
+        default="auto",
+    )
+    parser.add_argument(
+        "--fit-ddm",
         choices=("auto", "always", "never"),
         default="auto",
     )
@@ -107,11 +131,15 @@ def main() -> int:
     ensure_empty_output_dir(output_dir)
 
     task_dir = output_dir / "task"
+    events_dir = output_dir / "events"
     metadata_dir = output_dir / "metadata"
+    model_dir = output_dir / "model"
     psychds_dir = output_dir / "psychds"
     report_dir = output_dir / "report"
+    preregistration_dir = report_dir / "preregistration"
     validation_dir = report_dir / "validation"
     provenance_dir = report_dir / "provenance"
+    preregistration_dir.mkdir(parents=True, exist_ok=True)
     validation_dir.mkdir(parents=True, exist_ok=True)
     provenance_dir.mkdir(parents=True, exist_ok=True)
 
@@ -140,6 +168,11 @@ def main() -> int:
         profile=profile,
         study_spec_sha256=context.spec_sha256,
     )
+    hed_metadata = write_hed_events(
+        events_dir=events_dir,
+        synthetic_tables=synthetic_tables,
+        demo_profile=profile,
+    )
     psychds_metadata = write_psychds_dataset(
         psychds_dir=psychds_dir,
         study_title=study_title,
@@ -147,11 +180,21 @@ def main() -> int:
         study_spec_sha256=context.spec_sha256,
         synthetic_tables=synthetic_tables,
     )
+    modeling_metadata = write_model_artifacts(
+        model_dir=model_dir,
+        synthetic_tables=synthetic_tables,
+        bayesian_mode=args.fit_bayes,
+        ddm_mode=args.fit_ddm,
+    )
 
+    hed_validation_artifact, hed_validation_summary = run_hed_validator(
+        output_dir, hed_metadata, args.validate_hed
+    )
     psychds_validation_artifact, psychds_validation_summary = run_psychds_validator(
         psychds_dir, args.validate_psychds
     )
     write_json(validation_dir / "study-spec-validation.json", study_validation)
+    write_json(validation_dir / "hed-validator.json", hed_validation_artifact)
     write_json(validation_dir / "psychds-validator.json", psychds_validation_artifact)
 
     run_manifest = build_run_manifest(
@@ -161,12 +204,15 @@ def main() -> int:
         demo_profile=profile,
         schedule_summary=schedule_summary,
         task_metadata=task_metadata,
+        hed_metadata=hed_metadata,
         psychds_metadata=psychds_metadata,
+        modeling_metadata=modeling_metadata,
         study_validation=study_validation,
+        hed_validation_summary=hed_validation_summary,
         psychds_validation_summary=psychds_validation_summary,
     )
 
-    manifest = report_bundle_manifest()
+    manifest = report_bundle_manifest(hed_metadata, modeling_metadata)
     report_bundle_validation = validate_report_bundle(manifest)
     run_manifest["validation"]["report_bundle"]["status"] = (
         "passed" if report_bundle_validation["valid"] else "failed"
@@ -175,6 +221,14 @@ def main() -> int:
     write_json(report_dir / "report_bundle.json", manifest)
     write_json(validation_dir / "report-bundle-validation.json", report_bundle_validation)
     write_json(provenance_dir / "run_manifest.json", run_manifest)
+
+    preregistration = build_preregistration_artifact(
+        normalized_spec=context.normalized_spec,
+        study_spec_reference=study_spec_reference,
+        study_spec_sha256=context.spec_sha256,
+        run_manifest=run_manifest,
+    )
+    write_json(preregistration_dir / "preregistration.json", preregistration)
 
     report_text = report_markdown(study_spec_reference, run_manifest)
     methods_text = methods_markdown(
@@ -189,6 +243,24 @@ def main() -> int:
     commands_path.write_text(commands_script(), encoding="utf-8")
     commands_path.chmod(0o755)
     write_environment_lock(report_dir / "environment.lock.yml", environment_lock())
+    bundle_artifacts = expected_bundle_artifacts(output_dir)
+    write_json(
+        provenance_dir / "ro-crate-metadata.json",
+        build_ro_crate_metadata(
+            study_title=study_title,
+            study_spec_reference=study_spec_reference,
+            study_spec_sha256=context.spec_sha256,
+            expected_files=bundle_artifacts,
+        ),
+    )
+    write_json(
+        provenance_dir / "prov.jsonld",
+        build_prov_jsonld(
+            study_spec_reference=study_spec_reference,
+            study_spec_sha256=context.spec_sha256,
+            expected_files=bundle_artifacts,
+        ),
+    )
     write_checksums(output_dir, report_dir / "checksums.sha256")
 
     print(json.dumps({"output_dir": output_dir.as_posix(), "status": "ok"}, indent=2))

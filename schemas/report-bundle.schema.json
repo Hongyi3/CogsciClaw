@@ -7,7 +7,10 @@
     "methods",
     "commands",
     "environment",
-    "checksums"
+    "checksums",
+    "provenance",
+    "preregistration",
+    "run_manifest"
   ],
   "properties": {
     "report": { "type": "string" },
@@ -15,6 +18,26 @@
     "commands": { "type": "string" },
     "environment": { "type": "string" },
     "checksums": { "type": "string" },
+    "events": {
+      "type": "object",
+      "properties": {
+        "sidecar": { "type": "string" },
+        "tables": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "input": { "type": "string" },
+        "manifest": { "type": "string" },
+        "bayesian_condition_effects": { "type": "string" },
+        "bayesian_diagnostics": { "type": "string" },
+        "ddm_status": { "type": "string" }
+      }
+    },
     "validation": {
       "type": "object",
       "properties": {
@@ -25,13 +48,19 @@
     },
     "provenance": {
       "type": "object",
+      "required": ["ro_crate", "prov"],
       "properties": {
-        "ro_crate": { "type": ["string", "null"] },
-        "prov": { "type": ["string", "null"] }
+        "ro_crate": { "type": "string" },
+        "prov": { "type": "string" }
       }
     },
     "preregistration": {
-      "type": ["object", "null"]
-    }
+      "type": "object",
+      "required": ["artifact"],
+      "properties": {
+        "artifact": { "type": "string" }
+      }
+    },
+    "run_manifest": { "type": "string" }
   }
 }

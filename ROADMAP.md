@@ -24,8 +24,10 @@
 
 - implemented: canonical Flanker jsPsych task package with local assets
 - implemented: deterministic synthetic demo data and Psych-DS-aligned curation
-- implemented: report bundle manifest, methods, commands, environment, checksums, and validation artifacts
-- remaining: HED annotation, Bayesian / DDM modeling, preregistration exports, and RO-Crate / PROV packaging
+- implemented: report bundle manifest, methods, commands, environment, checksums, validation artifacts, deterministic preregistration export, and machine-readable provenance packaging
+- implemented: HED annotation plus truthful local validation artifacts for the canonical Flanker demo
+- implemented: verified Bayesian baseline artifacts with diagnostics on healthy Python >=3.11 runtimes and honest DDM runtime probing
+- deferred within the completed behavioral slice: drift-diffusion fitting beyond runtime probing, registry or API preregistration submission, validator-backed RO-Crate / PROV conformance claims, and figures / tables
 
 ### Goals
 

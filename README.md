@@ -59,20 +59,30 @@ The repository currently supports one deterministic demo path:
 python3 scripts/run_flanker_behavioral_slice.py \
   --study-spec examples/flanker-behavioral/study_spec.yaml \
   --output-dir output/flanker-behavioral \
-  --validate-psychds auto
+  --validate-psychds auto \
+  --validate-hed auto \
+  --fit-bayes auto \
+  --fit-ddm auto
 ```
+
+Use a Python >=3.11 environment with the `behavior` and `modeling` extras installed to exercise the supported Bayesian path. Unsupported interpreters still run the slice, but they record a structured `not_run` model status instead of claiming a fit.
 
 That command generates:
 
 - a real offline-capable jsPsych Flanker task package using local vendored assets
+- deterministic HED event artifacts for the canonical Flanker demo
 - deterministic synthetic demo trial tables for two response-mapping variants
+- deterministic model inputs plus Bayesian/DDM status artifacts for the canonical Flanker demo
 - a Psych-DS-aligned curated dataset for the demo path
-- a reproducibility bundle with manifest, methods, commands, environment, checksums, and validation artifacts
+- a reproducibility bundle with manifest, methods, commands, environment, checksums, validation artifacts, deterministic preregistration export, and machine-readable provenance packaging
 
 ## Implemented Flanker bundle
 
 ```text
 output/
+├── events/
+│   ├── flanker_events.json
+│   └── participant-*_events.tsv
 ├── task/
 │   ├── index.html
 │   ├── task.js
@@ -86,6 +96,12 @@ output/
 │   ├── trial_schedule_summary.json
 │   ├── column_definitions.json
 │   └── participant-*_trials.csv
+├── model/
+│   ├── model_input.csv
+│   ├── model_manifest.json
+│   ├── bayesian-condition-effects.json
+│   ├── bayesian-diagnostics.json
+│   └── ddm-status.json
 ├── psychds/
 │   ├── dataset_description.json
 │   └── data/
@@ -96,12 +112,22 @@ output/
     ├── commands.sh
     ├── environment.lock.yml
     ├── checksums.sha256
+    ├── preregistration/
+    │   └── preregistration.json
     ├── provenance/
+    │   ├── ro-crate-metadata.json
+    │   ├── prov.jsonld
     │   └── run_manifest.json
     └── validation/
+        ├── hed-validator.json
+        ├── psychds-validator.json
+        ├── report-bundle-validation.json
+        └── study-spec-validation.json
 ```
 
-Deferred from the current slice: HED outputs, Bayesian/DDM modeling, preregistration exports, RO-Crate packaging, PROV packaging, figures, and tables.
+The current model contract is honest-by-default: on healthy local Python >=3.11 environments with PyMC / ArviZ installed, the bundle includes a real Bayesian baseline fit and diagnostics for the canonical synthetic Flanker demo. When local PyMC / ArviZ or HDDM tooling is unavailable, the bundle records structured `not_run` model artifacts instead of claiming a fit. The reproducibility bundle now also includes a local preregistration export plus machine-readable RO-Crate / PROV packaging for the canonical Flanker slice.
+
+Deferred from the current slice: drift-diffusion fitting beyond runtime probing, registry or API preregistration submission, validator-backed RO-Crate / PROV conformance claims, figures, and tables.
 
 ## How to use this repository
 
@@ -122,10 +148,10 @@ Deferred from the current slice: HED outputs, Bayesian/DDM modeling, preregistra
 | `task-psychopy` | scaffold | v1 | behavior | Psych-DS, HED, Cognitive Atlas | Generate lab-based or hybrid PsychoPy task packages from a structured study specification. |
 | `psychds-curator` | supported-demo | v1 | curation | Psych-DS | Curate the deterministic Flanker demo trial tables into a Psych-DS-aligned dataset with optional official validator output. |
 | `bids-curator` | scaffold | v1 | curation | BIDS | Prepare BIDS-compatible dataset structure and metadata for EEG/MEG-focused workflows. |
-| `hed-annotator` | scaffold | v1 | annotation | HED, BIDS | Map task events to HED strings and emit validation outputs for event semantics. |
-| `ddm-bayes` | scaffold | v1 | modeling | PyMC, HDDM, ArviZ | Fit Bayesian and hierarchical drift-diffusion models with diagnostics and posterior predictive checks. |
+| `hed-annotator` | supported-demo | v1 | annotation | HED | Generate deterministic HED event tables and optional local hedtools validation artifacts for the canonical Flanker behavioral demo. |
+| `ddm-bayes` | supported-demo | v1 | modeling | PyMC, HDDM, ArviZ | Emit deterministic model artifacts, fit a supported Bayesian baseline with diagnostics on healthy local runtimes, and record honest DDM runtime-probe status for the canonical Flanker demo. |
 | `eeg-meg-pipeline` | scaffold | v1.1 | neuro | BIDS, MNE-BIDS, MNE, HED | Orchestrate EEG/MEG intake and preprocessing with MNE-BIDS and MNE-Python. |
-| `repro-bundle` | supported-demo | v1 | reproducibility | JSON Schema | Assemble the deterministic Flanker demo reproducibility bundle with manifest, methods, commands, environment, checksums, and validation artifacts. |
+| `repro-bundle` | supported-demo | v1 | reproducibility | JSON Schema, RO-Crate, PROV | Assemble the deterministic Flanker demo reproducibility bundle with preregistration export, RO-Crate / PROV packaging, manifest, methods, commands, environment, checksums, and validation artifacts. |
 <!-- SKILL_TABLE_END -->
 
 ## What is already scaffolded here
@@ -141,4 +167,4 @@ Deferred from the current slice: HED outputs, Bayesian/DDM modeling, preregistra
 
 ## Current status
 
-This repository is still early-stage, but it is no longer scaffold-only. The canonical Flanker behavioral slice is implemented as a supported demo for `task-jspsych`, `psychds-curator`, and `repro-bundle`. All other skills remain scaffolded or deferred until they have real validator-backed implementation paths.
+This repository is still early-stage, but it is no longer scaffold-only. The canonical Flanker behavioral slice is implemented as a supported demo for `task-jspsych`, `hed-annotator`, `psychds-curator`, `ddm-bayes`, and `repro-bundle`. The `ddm-bayes` support claim is narrow: a verified Bayesian baseline exists for the canonical synthetic Flanker slice on healthy Python >=3.11 runtimes, while fitted DDM results remain deferred and continue to surface as honest runtime-probe status artifacts. The `repro-bundle` support claim is also narrow: it now emits deterministic preregistration plus machine-readable RO-Crate / PROV exports for the canonical synthetic slice, without claiming registry submission or validator-backed provenance conformance.

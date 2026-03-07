@@ -101,14 +101,13 @@
     {
       "slug": "hed-annotator",
       "name": "hed-annotator",
-      "status": "scaffold",
+      "status": "supported-demo",
       "phase": "v1",
       "lane": "annotation",
       "standards": [
-        "HED",
-        "BIDS"
+        "HED"
       ],
-      "description": "Map task events to HED strings and emit validation outputs for event semantics.",
+      "description": "Generate deterministic HED event tables and optional local hedtools validation artifacts for the canonical Flanker behavioral demo.",
       "trigger_keywords": [
         "hed",
         "event annotation",
@@ -117,17 +116,15 @@
       ],
       "chaining_partners": [
         "task-jspsych",
-        "task-psychopy",
-        "bids-curator",
-        "eeg-meg-pipeline",
+        "psychds-curator",
         "repro-bundle"
       ],
-      "demo_command": "TBD"
+      "demo_command": "python3 scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir output/flanker-behavioral --validate-psychds auto --validate-hed auto"
     },
     {
       "slug": "ddm-bayes",
       "name": "ddm-bayes",
-      "status": "scaffold",
+      "status": "supported-demo",
       "phase": "v1",
       "lane": "modeling",
       "standards": [
@@ -135,7 +132,7 @@
         "HDDM",
         "ArviZ"
       ],
-      "description": "Fit Bayesian and hierarchical drift-diffusion models with diagnostics and posterior predictive checks.",
+      "description": "Emit deterministic model artifacts, fit a supported Bayesian baseline with diagnostics on healthy local runtimes, and record honest DDM runtime-probe status for the canonical Flanker demo.",
       "trigger_keywords": [
         "ddm",
         "bayesian",
@@ -147,7 +144,7 @@
         "psychds-curator",
         "repro-bundle"
       ],
-      "demo_command": "TBD"
+      "demo_command": "python3 scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir output/flanker-behavioral --validate-psychds auto --validate-hed auto --fit-bayes auto --fit-ddm auto"
     },
     {
       "slug": "eeg-meg-pipeline",
@@ -184,9 +181,11 @@
       "phase": "v1",
       "lane": "reproducibility",
       "standards": [
-        "JSON Schema"
+        "JSON Schema",
+        "RO-Crate",
+        "PROV"
       ],
-      "description": "Assemble the deterministic Flanker demo reproducibility bundle with manifest, methods, commands, environment, checksums, and validation artifacts.",
+      "description": "Assemble the deterministic Flanker demo reproducibility bundle with preregistration export, RO-Crate / PROV packaging, manifest, methods, commands, environment, checksums, and validation artifacts.",
       "trigger_keywords": [
         "reproducibility bundle",
         "report bundle",
@@ -202,7 +201,7 @@
         "ddm-bayes",
         "eeg-meg-pipeline"
       ],
-      "demo_command": "python3 scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir output/flanker-behavioral --validate-psychds auto"
+      "demo_command": "python3 scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir output/flanker-behavioral --validate-psychds auto --validate-hed auto --fit-bayes auto --fit-ddm auto"
     }
   ]
 }

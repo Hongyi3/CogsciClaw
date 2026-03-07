@@ -39,12 +39,12 @@ Researchers often rebuild common tasks from scratch, creating inconsistent data 
 ## Unsupported or deferred cases
 
 - arbitrary behavioral study specifications
-- HED annotation or HED validation
 - Cognitive Atlas mappings
 - adaptive tasks with complex online optimization
 - hardware-timed paradigms requiring lab-specific devices
 - claims of psychometric validation beyond the study specification
 - live browser-run data ingestion into the curated dataset path
+- standalone HED annotation without the downstream `hed-annotator` step
 
 ## Inputs
 
@@ -59,14 +59,14 @@ Researchers often rebuild common tasks from scratch, creating inconsistent data 
 2. Validate it against `schemas/study-spec.schema.yaml` and the canonical Flanker profile for this milestone.
 3. Generate a deterministic 160-trial Flanker schedule and task metadata.
 4. Render `index.html`, `task.js`, `trials.json`, and local jsPsych assets into an offline-capable task package.
-5. Emit metadata for downstream Psych-DS curation.
+5. Emit metadata for downstream HED annotation and Psych-DS curation.
 
 ## Validation
 
 - schema validation for the study spec
 - deterministic trial-count and condition-count checks
 - task artifact file-contract checks in CI
-- no HED validation path in this milestone
+- downstream HED validation is available for the canonical Flanker slice through `hed-annotator`
 
 ## Demo mode
 
@@ -76,7 +76,8 @@ Run:
 python3 scripts/run_flanker_behavioral_slice.py \
   --study-spec examples/flanker-behavioral/study_spec.yaml \
   --output-dir output/flanker-behavioral \
-  --validate-psychds auto
+  --validate-psychds auto \
+  --validate-hed auto
 ```
 
 ## Outputs
@@ -105,9 +106,9 @@ output/
 ## Integration notes
 
 - upstream: study spec
-- downstream: `psychds-curator`, `repro-bundle`
+- downstream: `hed-annotator`, `psychds-curator`, `repro-bundle`
 
 ## Citations
 
 - cite jsPsych and the html-keyboard-response plugin
-- note that HED and Cognitive Atlas support remain deferred in this milestone
+- note that Cognitive Atlas support remains deferred in this milestone

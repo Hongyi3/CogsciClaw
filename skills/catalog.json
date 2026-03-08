@@ -78,13 +78,13 @@
     {
       "slug": "bids-curator",
       "name": "bids-curator",
-      "status": "scaffold",
+      "status": "supported-demo",
       "phase": "v1",
       "lane": "curation",
       "standards": [
         "BIDS"
       ],
-      "description": "Prepare BIDS-compatible dataset structure and metadata for EEG/MEG-focused workflows.",
+      "description": "Emit the canonical auditory oddball EEG BIDS-aligned intake tree with truthful local validator status artifacts.",
       "trigger_keywords": [
         "bids",
         "eeg bids",
@@ -96,7 +96,7 @@
         "eeg-meg-pipeline",
         "repro-bundle"
       ],
-      "demo_command": "TBD"
+      "demo_command": "python3 scripts/run_oddball_bids_slice.py --study-spec examples/eeg-oddball/study_spec.yaml --output-dir output/eeg-oddball-bids-intake --validate-bids auto"
     },
     {
       "slug": "hed-annotator",

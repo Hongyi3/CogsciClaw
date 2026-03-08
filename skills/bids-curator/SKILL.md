@@ -1,20 +1,20 @@
 ---
 name: bids-curator
-description: Prepare BIDS-compatible dataset structure and metadata for EEG/MEG-focused workflows.
+description: Emit the canonical auditory oddball EEG BIDS-aligned intake tree with truthful local validator status artifacts.
 version: 0.1.0
-status: scaffold
+status: supported-demo
 tags:
   - cognitive-science
   - reproducibility
+  - bids
 modality:
   - eeg
-  - meg
 standards:
   - BIDS
 trigger_keywords:
   - bids
   - eeg bids
-  - meg bids
+  - oddball
   - dataset_description
 dependencies:
   python: ">=3.11"
@@ -23,66 +23,92 @@ dependencies:
 
 # bids-curator
 
-## Why this exists
+## Purpose
 
-EEG/MEG workflows become brittle when file organization and metadata are inconsistent. This skill should prepare a BIDS-aligned intake layer so downstream pipelines can rely on stable structure and validation.
+Prepare a deterministic, reviewable BIDS-aligned intake tree for the checked-in auditory oddball EEG demo without inventing empirical acquisition metadata or claiming preprocessing support.
 
 ## Supported use cases
 
-- EEG/MEG-focused BIDS intake
-- dataset metadata and sidecar scaffolding
-- validator-oriented file organization
+- the canonical study spec at `examples/eeg-oddball/study_spec.yaml`
+- local emission of `dataset_description.json`, `README.md`, participant summary files, and placeholder participant metadata under `bids-intake/`
+- truthful local `bids-validator` execution when a preinstalled `bids-validator` binary is available
+- structured `not_run` validator artifacts when the validator binary is unavailable or disabled
 
-## Unsupported or deferred cases
+## Unsupported use cases
 
-- unsupported modality-specific edge cases without explicit implementation
-- claims of preprocessing or analysis on its own
+- arbitrary EEG or MEG study specifications
+- empirical EEG conversion, raw file import, or signal processing
+- `events.tsv`, `channels.tsv`, `electrodes.tsv`, or HED generation from incomplete inputs
+- MNE-BIDS ingestion, MNE preprocessing, ERP analysis, QC dashboards, or participant-level interpretation
+- claims of BIDS compliance without a real validator result
 
 ## Inputs
 
 | Input | Format | Required | Notes |
 |---|---|---:|---|
-| raw modality data | format-specific | yes | EEG/MEG source data |
-| acquisition metadata | JSON / TSV / notes | yes | subject/session/task metadata |
+| study spec | YAML | yes | must match the checked-in canonical oddball demo profile |
+| validator mode | CLI flag | no | `auto`, `always`, or `never` |
 
 ## Workflow
 
-1. Parse intake metadata.
-2. Organize files into BIDS-compatible layout.
-3. Generate required metadata sidecars and dataset description fields.
-4. Emit validator outputs or readiness reports.
-
-## Validation
-
-- BIDS validator path required before claiming support
-
-## Demo mode
-
-Provide a minimal BIDS-ready demo tree or synthetic metadata pathway for CI.
+1. Validate the study spec against the schema and the supported oddball profile.
+2. Emit a BIDS-aligned intake tree with explicit placeholder-only labeling.
+3. Run `bids-validator` only if a local binary is already available, otherwise emit a truthful `not_run` artifact.
+4. Surface the intake contract, validator status, preregistration export, and provenance references in the reproducibility bundle.
 
 ## Outputs
 
 ```text
 output/
-├── bids_dataset/
+├── bids-intake/
 │   ├── dataset_description.json
+│   ├── README.md
 │   ├── participants.tsv
-│   └── sub-*/
-├── validation/
-│   └── bids-validator.json
-└── report.md
+│   ├── participants.json
+│   ├── intake_manifest.json
+│   └── sub-placeholder*/eeg/*_intake-placeholder.json
+└── report/
+    ├── report_bundle.json
+    ├── report.md
+    ├── methods.md
+    ├── preregistration/preregistration.json
+    ├── provenance/
+    └── validation/bids-validator.json
 ```
+
+## Validation
+
+- study-spec schema validation is always emitted
+- BIDS validation is recorded as `passed`, `failed`, or `not_run`
+- `not_run` is the truthful default when no local `bids-validator` binary is present
+
+## Demo mode
+
+Run the canonical slice with:
+
+```bash
+python3 scripts/run_oddball_bids_slice.py \
+  --study-spec examples/eeg-oddball/study_spec.yaml \
+  --output-dir output/eeg-oddball-bids-intake \
+  --validate-bids auto
+```
+
+Use a Python >=3.11 environment. The demo emits placeholder-only metadata, not empirical EEG data.
 
 ## Safety
 
-- never claim BIDS compliance without a validator step
-- treat source acquisition metadata as sensitive
-
-## Integration notes
-
-- downstream: `hed-annotator`, `eeg-meg-pipeline`, `repro-bundle`
+- do not treat placeholder participant artifacts as empirical recordings
+- do not log participant identifiers beyond deterministic placeholder IDs
+- do not fetch validator code or other tooling over the network
+- keep privacy review explicit because the canonical oddball spec marks `contains_sensitive_data: true`
 
 ## Citations
 
-- cite BIDS and any modality-specific BIDS references used
+- BIDS specification
+- BIDS Validator documentation
 
+## Integration notes
+
+- upstream input: `examples/eeg-oddball/study_spec.yaml`
+- downstream consumers: `repro-bundle`, later `eeg-meg-pipeline`
+- current support boundary: intake metadata only; no preprocessing or analysis contract

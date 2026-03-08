@@ -46,6 +46,32 @@
         "hed": { "type": ["string", "null"] }
       }
     },
+    "bids_intake": {
+      "type": "object",
+      "required": [
+        "root",
+        "dataset_description",
+        "readme",
+        "participants_tsv",
+        "participants_json",
+        "intake_manifest",
+        "placeholder_files",
+        "validator_artifact"
+      ],
+      "properties": {
+        "root": { "type": "string" },
+        "dataset_description": { "type": "string" },
+        "readme": { "type": "string" },
+        "participants_tsv": { "type": "string" },
+        "participants_json": { "type": "string" },
+        "intake_manifest": { "type": "string" },
+        "placeholder_files": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "validator_artifact": { "type": "string" }
+      }
+    },
     "provenance": {
       "type": "object",
       "required": ["ro_crate", "prov"],

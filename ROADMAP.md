@@ -47,6 +47,11 @@
 
 ## Phase 2 — EEG/MEG expansion (months 3–6)
 
+### Milestone 2 status
+
+- implemented: canonical auditory oddball EEG BIDS-aligned intake tree with deterministic placeholder participant artifacts, machine-readable intake metadata, and truthful local `bids-validator` status artifacts
+- deferred within the current neuro slice: empirical EEG conversion, `events.tsv` / channel / electrode metadata generation, HED annotation, MNE-BIDS ingestion, MNE preprocessing, QC dashboards, ERP analysis, and participant-level interpretation
+
 ### Goals
 
 - implement `bids-curator`

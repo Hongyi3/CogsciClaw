@@ -7,7 +7,7 @@ Persistent cross-run milestone state lives in `project_state/`.
 ## Current execution plan
 
 ### Task
-Complete `M1D — preregistration and provenance packaging for the Flanker slice` by emitting deterministic preregistration and machine-readable provenance artifacts for the canonical Flanker demo, then close the milestone honestly.
+Complete `M2A — BIDS-curated EEG/MEG oddball intake slice` by implementing a deterministic, validator-aware BIDS intake path for the checked-in auditory oddball study spec, then close the milestone honestly if verification justifies it.
 
 ### Scope
 - `PLANS.md`
@@ -16,46 +16,48 @@ Complete `M1D — preregistration and provenance packaging for the Flanker slice
 - `project_state/MILESTONE_HISTORY.md`
 - `project_state/BACKLOG.md`
 - `src/cogsci_skilllib/study_spec.py`
+- `src/cogsci_skilllib/bids_curator.py`
 - `src/cogsci_skilllib/repro_bundle.py`
-- `scripts/run_flanker_behavioral_slice.py`
+- `scripts/run_oddball_bids_slice.py`
 - `schemas/report-bundle.schema.json`
+- `tests/test_oddball_bids_slice.py`
 - `tests/test_flanker_behavioral_slice.py`
-- `skills/repro-bundle/SKILL.md`
+- `skills/bids-curator/SKILL.md`
 - `skills/catalog.json`
 - `README.md`
-- `docs/reproducibility-bundle.md`
 - `ROADMAP.md`
 - `docs/generated/skills-table.md`
 
 ### Constraints
-- Keep the implementation limited to the canonical deterministic Flanker demo slice.
-- Emit real preregistration and provenance artifacts derived from normalized study-spec content and runtime metadata; do not add prose-only placeholders.
-- Keep synthetic-demo labeling explicit throughout preregistration, provenance, report, and methods outputs.
-- Do not claim registry/API preregistration submission, validator-backed RO-Crate / PROV conformance, DDM fitting, figures, tables, or arbitrary study-spec support.
-- Preserve truthful runtime-sensitive Bayesian semantics: supported runtimes may pass, unsupported runtimes must still record structured `not_run` or `failed` artifacts.
-- Preserve the existing honest `Cognitive Atlas` unsupported-standard behavior.
+- Keep the implementation limited to the canonical auditory oddball EEG study spec in `examples/eeg-oddball/study_spec.yaml`.
+- Emit a real BIDS-aligned intake tree with explicit placeholder labeling and no invented empirical acquisition metadata.
+- Do not emit EEG raw files, events, channels, electrodes, HED artifacts, MNE-BIDS outputs, preprocessing outputs, ERP analyses, or participant-level interpretations.
+- Use only a preinstalled local `bids-validator` binary for validation; otherwise emit structured `not_run` artifacts with no network bootstrap.
+- Preserve the existing Flanker behavioral slice unchanged except where shared schema or bundle code must expand to support the oddball intake contract.
+- Keep privacy review explicit because the oddball study spec marks `contains_sensitive_data: true`.
 - Regenerate catalog-driven docs only from `skills/catalog.json`.
 
 ### Steps
-1. Replace the stale M1C plan in this file with the M1D execution plan before any other repo edits.
-2. Extend the study-spec support contract so the canonical Flanker slice truthfully supports `preregistration` output while leaving unsupported standards explicit.
-3. Add deterministic preregistration, RO-Crate, and PROV builders to the reproducibility bundle code and wire their artifact paths into the run manifest, report bundle manifest, methods text, and report text.
-4. Update the Flanker runner to emit `report/preregistration/preregistration.json`, `report/provenance/ro-crate-metadata.json`, and `report/provenance/prov.jsonld` before final checksum generation.
-5. Tighten the report-bundle schema and integration test expectations around the new artifact contract.
-6. Update `repro-bundle` skill metadata and public docs to reflect the actual supported-demo contract, then regenerate derived skill-table outputs.
-7. Run the required verification commands, inspect the emitted artifacts, and only then mark M1D complete in the project-state files.
-8. If all checks pass, advance project state to `M2A — BIDS-curated EEG/MEG oddball intake slice`; otherwise keep M1D open with precise blockers and next actions.
+1. Replace the stale M1D plan in this file with the M2A execution plan before any other repo edits.
+2. Refactor study-spec validation into profile-aware logic so both the canonical Flanker demo and the canonical oddball BIDS-intake demo are supported explicitly and truthfully.
+3. Implement `src/cogsci_skilllib/bids_curator.py` for the canonical oddball intake tree plus local-only BIDS-validator integration.
+4. Add `scripts/run_oddball_bids_slice.py` to validate the oddball study spec, emit the intake tree, write validation artifacts, and assemble the full reproducibility bundle.
+5. Extend the report-bundle schema and bundle code to surface oddball intake metadata, validator status, preregistration, and provenance without weakening the Flanker path.
+6. Add deterministic oddball tests and keep the Flanker suite green.
+7. Update `skills/bids-curator/SKILL.md`, `skills/catalog.json`, `README.md`, `ROADMAP.md`, and generated skill-table outputs to match the real supported-demo oddball intake contract.
+8. Run milestone verification commands, inspect the emitted oddball artifacts, and only then update the project-state files to close M2A and record M2B as the next milestone.
+9. Stage only milestone files, commit once, and push to `origin` on the current branch unless a safe push is blocked.
 
 ### Verification
 - `pytest -q`
 - `.venv/bin/python -m pytest -q`
-- `.venv/bin/python scripts/run_flanker_behavioral_slice.py --study-spec examples/flanker-behavioral/study_spec.yaml --output-dir <temp-dir> --validate-psychds auto --validate-hed auto --fit-bayes auto --fit-ddm auto`
-- Inspect `report/preregistration/preregistration.json`, `report/provenance/ro-crate-metadata.json`, `report/provenance/prov.jsonld`, `report/report_bundle.json`, `report/provenance/run_manifest.json`, `report/report.md`, and `report/methods.md`.
+- `.venv/bin/python scripts/run_oddball_bids_slice.py --study-spec examples/eeg-oddball/study_spec.yaml --output-dir <temp-dir> --validate-bids auto`
+- Inspect `bids-intake/`, `report/validation/bids-validator.json`, `report/report_bundle.json`, `report/provenance/run_manifest.json`, and `report/preregistration/preregistration.json`
 - `python3 scripts/render_skill_catalog.py`
 - `python3 scripts/render_skill_catalog.py --check`
 
 ### Notes / risks
-- `python3` on this machine still resolves to Python 3.9.13, so the supported Bayesian verification path must continue to use `.venv/bin/python`.
-- The repo worktree is already dirty; only milestone-relevant files should be edited, staged, committed, and pushed.
-- Provenance exports should follow minimal RO-Crate / PROV structures without overstating validator-backed conformance.
-- Checksums must remain deterministic and must not recurse through self-hashing provenance content.
+- `python3` on this machine still resolves to Python 3.9.13; supported implementation and verification should continue to use `.venv/bin/python` where Python >=3.11 is required.
+- The machine currently has no `bids-validator`, `node`, `npm`, `npx`, or `deno` on `PATH`, so the expected validator result in this environment is `not_run`.
+- The worktree is already dirty in unrelated files; do not stage or revert `docs/codex-playbook.md` or `.github/codex/prompts/*`.
+- Project-state files should only advance to M2B if the oddball slice, tests, docs, generated outputs, commit, and push all succeed.

@@ -201,6 +201,7 @@ def main() -> int:
         study_spec_reference=study_spec_reference,
         study_spec_sha256=context.spec_sha256,
         study_title=study_title,
+        supported_profile_name=context.supported_profile["id"],
         demo_profile=profile,
         schedule_summary=schedule_summary,
         task_metadata=task_metadata,

@@ -21,6 +21,7 @@ RUN_MANIFEST_ARTIFACT = "report/provenance/run_manifest.json"
 RO_CRATE_ARTIFACT = "report/provenance/ro-crate-metadata.json"
 PROV_ARTIFACT = "report/provenance/prov.jsonld"
 CHECKSUMS_ARTIFACT = "report/checksums.sha256"
+BIDS_VALIDATION_ARTIFACT = "report/validation/bids-validator.json"
 
 BASE_UNSUPPORTED_CAPABILITIES = [
     "Cognitive Atlas mappings",
@@ -29,6 +30,19 @@ BASE_UNSUPPORTED_CAPABILITIES = [
     "validator-backed RO-Crate / PROV conformance claims",
     "figures and tables",
     "arbitrary behavioral study specifications beyond the canonical Flanker demo",
+]
+ODDBALL_UNSUPPORTED_CAPABILITIES = [
+    "empirical EEG or MEG signal conversion",
+    "events.tsv timing generation",
+    "channels.tsv or electrodes.tsv metadata",
+    "HED annotation",
+    "MNE-BIDS ingestion",
+    "MNE preprocessing, QC dashboards, or ERP analysis",
+    "participant-level scientific interpretation",
+    "registry or API preregistration submission",
+    "validator-backed RO-Crate / PROV conformance claims",
+    "figures and tables",
+    "arbitrary EEG/MEG study specifications beyond the canonical oddball demo",
 ]
 
 
@@ -62,6 +76,8 @@ def environment_lock() -> Dict[str, Any]:
             "hedtools": package_version("hedtools"),
             "hddm": package_version("hddm"),
             "jsonschema": package_version("jsonschema"),
+            "mne": package_version("mne"),
+            "mne-bids": package_version("mne-bids"),
             "numpy": package_version("numpy"),
             "pandas": package_version("pandas"),
             "PyYAML": package_version("PyYAML"),
@@ -88,6 +104,25 @@ OUTPUT_DIR="${OUTPUT_DIR:-output/flanker-behavioral}"
 
 if command -v validate >/dev/null 2>&1; then
   validate "${OUTPUT_DIR}/psychds" --json > "${OUTPUT_DIR}/report/validation/psychds-validator.json"
+fi
+"""
+
+
+def oddball_commands_script() -> str:
+    return """#!/usr/bin/env sh
+set -eu
+
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+OUTPUT_DIR="${OUTPUT_DIR:-output/eeg-oddball-bids-intake}"
+VALIDATE_BIDS="${VALIDATE_BIDS:-auto}"
+
+"${PYTHON_BIN}" scripts/run_oddball_bids_slice.py \
+  --study-spec examples/eeg-oddball/study_spec.yaml \
+  --output-dir "${OUTPUT_DIR}" \
+  --validate-bids "${VALIDATE_BIDS}"
+
+if command -v bids-validator >/dev/null 2>&1; then
+  bids-validator "${OUTPUT_DIR}/bids-intake" --json > "${OUTPUT_DIR}/report/validation/bids-validator.json"
 fi
 """
 
@@ -181,6 +216,7 @@ def build_run_manifest(
     study_spec_reference: str,
     study_spec_sha256: str,
     study_title: str,
+    supported_profile_name: str,
     demo_profile: Dict[str, Any],
     schedule_summary: Dict[str, Any],
     task_metadata: Dict[str, Any],
@@ -200,7 +236,7 @@ def build_run_manifest(
             "title": study_title,
         },
         "supported_slice": {
-            "name": "canonical-flanker-behavioral-demo",
+            "name": supported_profile_name,
             "hed_annotation": True,
             "model_artifacts": True,
             "preregistration_export": True,
@@ -240,6 +276,332 @@ def build_run_manifest(
         "unsupported_requested_outputs": study_validation["unsupported_requested_outputs"],
         "unsupported_requested_standards": study_validation["unsupported_requested_standards"],
         "unsupported_capabilities": _unsupported_capabilities(modeling_metadata),
+    }
+
+
+def _oddball_human_review_points(study_spec_reference: str) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": "ethics_privacy_review",
+            "reason": (
+                "The oddball study spec marks contains_sensitive_data=true, so local privacy and "
+                "ethics review remain mandatory before any empirical data handling."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "ethics.contains_sensitive_data"),
+                _source_ref(study_spec_reference, "ethics.notes"),
+                _source_ref("METHODS_POLICY.md", "Human review remains mandatory where needed"),
+            ],
+        },
+        {
+            "id": "acquisition_metadata_completion",
+            "reason": (
+                "The emitted intake tree is placeholder-only; acquisition metadata still requires "
+                "human completion before BIDS EEG files can be generated truthfully."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "modality"),
+                _source_ref("bids-intake/intake_manifest.json", "unsupported_artifacts"),
+            ],
+        },
+        {
+            "id": "event_timing_completion",
+            "reason": (
+                "Event timing files were not generated because the checked-in demo inputs do not "
+                "provide empirical onset or duration metadata."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "design"),
+                _source_ref("bids-intake/intake_manifest.json", "unsupported_artifacts"),
+            ],
+        },
+        {
+            "id": "participant_consent_review",
+            "reason": (
+                "Participant handling, consent, and screening procedures remain human decisions; "
+                "the intake tree contains deterministic placeholder participant identifiers only."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "participants"),
+                _source_ref("METHODS_POLICY.md", "Human review remains mandatory where needed"),
+            ],
+        },
+        {
+            "id": "empirical_registration_completion",
+            "reason": (
+                "This artifact is a local placeholder-demo preregistration export, not a completed "
+                "registry submission for an empirical EEG study."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "outputs.preregistration"),
+                _source_ref(PREREGISTRATION_ARTIFACT, "artifact_type"),
+            ],
+        },
+    ]
+
+
+def build_oddball_run_manifest(
+    study_spec_reference: str,
+    study_spec_sha256: str,
+    study_title: str,
+    supported_profile_name: str,
+    normalized_spec: Dict[str, Any],
+    bids_metadata: Dict[str, Any],
+    study_validation: Dict[str, Any],
+    bids_validation_summary: Dict[str, Any],
+) -> Dict[str, Any]:
+    return {
+        "runner": "scripts/run_oddball_bids_slice.py",
+        "version": __version__,
+        "study_spec": {
+            "path": study_spec_reference,
+            "sha256": study_spec_sha256,
+            "title": study_title,
+            "modality": normalized_spec["modality"],
+        },
+        "supported_slice": {
+            "name": supported_profile_name,
+            "bids_intake": True,
+            "bids_validator_artifact": True,
+            "preregistration_export": True,
+            "ro_crate_export": True,
+            "prov_export": True,
+            "reproducibility_bundle": True,
+            "placeholder_metadata_only": True,
+        },
+        "bids_intake": bids_metadata,
+        "ethics": {
+            "contains_sensitive_data": normalized_spec.get("ethics", {}).get("contains_sensitive_data", False),
+            "notes": normalized_spec.get("ethics", {}).get("notes", ""),
+        },
+        "preregistration": {
+            "artifact": PREREGISTRATION_ARTIFACT,
+        },
+        "provenance": {
+            "run_manifest": RUN_MANIFEST_ARTIFACT,
+            "ro_crate": RO_CRATE_ARTIFACT,
+            "prov": PROV_ARTIFACT,
+        },
+        "validation": {
+            "study_spec": {
+                "status": "passed" if study_validation["valid"] else "failed",
+                "schema": study_validation["schema"],
+            },
+            "bids": bids_validation_summary,
+            "report_bundle": {
+                "status": "pending",
+                "schema": "schemas/report-bundle.schema.json",
+            },
+        },
+        "unsupported_requested_outputs": study_validation["unsupported_requested_outputs"],
+        "unsupported_requested_standards": study_validation["unsupported_requested_standards"],
+        "unsupported_capabilities": list(ODDBALL_UNSUPPORTED_CAPABILITIES),
+    }
+
+
+def build_oddball_preregistration_artifact(
+    normalized_spec: Dict[str, Any],
+    study_spec_reference: str,
+    study_spec_sha256: str,
+    run_manifest: Dict[str, Any],
+) -> Dict[str, Any]:
+    requested_outputs = normalized_spec.get("outputs", {})
+    participants = normalized_spec.get("participants", {})
+    bids_validation = run_manifest["validation"]["bids"]
+
+    supported_claims = [
+        {
+            "id": "canonical_oddball_placeholder_scope",
+            "claim": (
+                "This artifact covers only the canonical auditory oddball EEG intake demo with "
+                "placeholder metadata, not empirical EEG recordings."
+            ),
+            "source_refs": [
+                _source_ref(study_spec_reference, "study.title"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "supported_slice.name"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "bids_intake.placeholder_only"),
+            ],
+        },
+        {
+            "id": "bids_aligned_intake_emitted",
+            "claim": (
+                "A deterministic BIDS-aligned intake tree was emitted with dataset metadata, "
+                "participant summary files, and placeholder participant artifacts."
+            ),
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "bids_intake.dataset_description"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "bids_intake.placeholder_files"),
+            ],
+        },
+        {
+            "id": "truthful_bids_validator_status_emitted",
+            "claim": "A validator-aware BIDS status artifact was emitted without claiming compliance blindly.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "validation.bids.status"),
+                _source_ref(BIDS_VALIDATION_ARTIFACT, "status"),
+            ],
+        },
+        {
+            "id": "machine_readable_provenance_exports_emitted",
+            "claim": "Machine-readable RO-Crate and PROV provenance exports were emitted in the bundle.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "provenance.ro_crate"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "provenance.prov"),
+            ],
+        },
+    ]
+    if bids_validation["status"] == "passed":
+        supported_claims.append(
+            {
+                "id": "local_bids_validator_passed_on_this_runtime",
+                "claim": "The local BIDS validator passed on this runtime for the emitted intake tree.",
+                "source_refs": [
+                    _source_ref(RUN_MANIFEST_ARTIFACT, "validation.bids.status"),
+                    _source_ref(BIDS_VALIDATION_ARTIFACT, "validator_output"),
+                ],
+            }
+        )
+
+    unsupported_claims = [
+        {
+            "id": "empirical_eeg_conversion_not_supported",
+            "claim": "Empirical EEG conversion is not supported in this milestone.",
+            "reason": "The emitted intake tree is placeholder-only and contains no raw EEG signal files.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "bids_intake.contains_empirical_data"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+            ],
+        },
+        {
+            "id": "hed_annotation_not_supported",
+            "claim": "HED annotation is not supported in this milestone for the oddball slice.",
+            "reason": "Event timing files were not generated, so no HED event contract is claimed.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_requested_standards"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+            ],
+        },
+        {
+            "id": "mne_pipeline_not_supported",
+            "claim": "MNE-BIDS ingestion and MNE preprocessing are not supported in this milestone.",
+            "reason": "This milestone stops at intake and validator-aware metadata packaging.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_requested_standards"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+            ],
+        },
+        {
+            "id": "erp_interpretation_not_supported",
+            "claim": "ERP analysis and participant-level interpretation are not supported in this milestone.",
+            "reason": "No preprocessing, epoching, or inference outputs are emitted.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+                _source_ref(study_spec_reference, "study.hypotheses"),
+            ],
+        },
+        {
+            "id": "registry_submission_not_supported",
+            "claim": "Registry or API preregistration submission is not supported in this milestone.",
+            "reason": "The bundle emits only a local deterministic export.",
+            "source_refs": [
+                _source_ref(PREREGISTRATION_ARTIFACT, "artifact_type"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+            ],
+        },
+        {
+            "id": "provenance_validation_not_supported",
+            "claim": "Validator-backed RO-Crate or PROV conformance claims are not supported in this milestone.",
+            "reason": "The bundle emits machine-readable provenance files without claiming external validation.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "provenance"),
+            ],
+        },
+        {
+            "id": "arbitrary_study_specs_not_supported",
+            "claim": "Arbitrary EEG/MEG study specifications are not supported in this milestone.",
+            "reason": "The supported profile remains the canonical auditory oddball intake demo only.",
+            "source_refs": [
+                _source_ref(RUN_MANIFEST_ARTIFACT, "supported_slice.name"),
+                _source_ref(RUN_MANIFEST_ARTIFACT, "unsupported_capabilities"),
+            ],
+        },
+    ]
+    if bids_validation["status"] == "failed":
+        unsupported_claims.append(
+            {
+                "id": "local_bids_validator_failed_on_this_runtime",
+                "claim": "The local BIDS validator did not pass on this runtime.",
+                "reason": "The emitted artifact records the validator result rather than claiming compliance.",
+                "source_refs": [
+                    _source_ref(RUN_MANIFEST_ARTIFACT, "validation.bids.status"),
+                    _source_ref(BIDS_VALIDATION_ARTIFACT, "validator_output"),
+                ],
+            }
+        )
+    if bids_validation["status"] == "not_run":
+        unsupported_claims.append(
+            {
+                "id": "bids_validation_not_run_on_this_runtime",
+                "claim": "BIDS validation was not executed on this runtime.",
+                "reason": bids_validation.get("reason", "No local bids-validator binary was available."),
+                "source_refs": [
+                    _source_ref(RUN_MANIFEST_ARTIFACT, "validation.bids.status"),
+                    _source_ref(BIDS_VALIDATION_ARTIFACT, "reason"),
+                ],
+            }
+        )
+
+    return {
+        "artifact_type": "cogsci-skilllib-preregistration-demo",
+        "supported_profile": run_manifest["supported_slice"]["name"],
+        "placeholder_demo": True,
+        "study_spec": {
+            "path": study_spec_reference,
+            "sha256": study_spec_sha256,
+            "schema": run_manifest["validation"]["study_spec"]["schema"],
+        },
+        "study": {
+            "title": normalized_spec["study"]["title"],
+            "research_question": normalized_spec["study"]["research_question"],
+            "hypotheses": normalized_spec["study"].get("hypotheses", []),
+            "modality": normalized_spec["modality"],
+        },
+        "design": {
+            "task_name": normalized_spec["design"]["task_name"],
+            "conditions": normalized_spec["design"]["conditions"],
+            "trial_count": normalized_spec["design"]["trial_count"],
+            "randomization": normalized_spec["design"]["randomization"],
+            "counterbalancing": normalized_spec["design"]["counterbalancing"],
+        },
+        "participants": {
+            "target_n": participants.get("target_n"),
+            "placeholder_subject_ids": run_manifest["bids_intake"]["placeholder_subject_ids"],
+            "contains_empirical_data": False,
+        },
+        "ethics": run_manifest["ethics"],
+        "requested_outputs": {
+            "requested": requested_outputs,
+            "unsupported_requested_outputs": run_manifest["unsupported_requested_outputs"],
+            "unsupported_requested_standards": run_manifest["unsupported_requested_standards"],
+        },
+        "intake_contract": {
+            "dataset_root": run_manifest["bids_intake"]["intake_root"],
+            "dataset_description": run_manifest["bids_intake"]["dataset_description"],
+            "participants_tsv": run_manifest["bids_intake"]["participants_tsv"],
+            "participants_json": run_manifest["bids_intake"]["participants_json"],
+            "intake_manifest": run_manifest["bids_intake"]["intake_manifest"],
+            "placeholder_files": run_manifest["bids_intake"]["placeholder_files"],
+            "placeholder_only": run_manifest["bids_intake"]["placeholder_only"],
+            "contains_empirical_data": run_manifest["bids_intake"]["contains_empirical_data"],
+            "bids_version": run_manifest["bids_intake"]["bids_version"],
+            "dataset_type": run_manifest["bids_intake"]["dataset_type"],
+            "validator_status": bids_validation["status"],
+            "validator_artifact": BIDS_VALIDATION_ARTIFACT,
+        },
+        "supported_claims": supported_claims,
+        "unsupported_claims": unsupported_claims,
+        "required_human_review": _oddball_human_review_points(study_spec_reference),
     }
 
 
@@ -600,6 +962,132 @@ This report summarizes what actually ran. Synthetic data is labeled synthetic th
     )
 
 
+def oddball_methods_markdown(
+    study_title: str,
+    study_spec_reference: str,
+    study_spec_sha256: str,
+    run_manifest: Dict[str, Any],
+) -> str:
+    bids_intake = run_manifest["bids_intake"]
+    validator = run_manifest["validation"]["bids"]
+    placeholder_ids = ", ".join(bids_intake["placeholder_subject_ids"])
+    unsupported_standards = ", ".join(run_manifest["unsupported_requested_standards"]) or "none"
+
+    return """# Methods
+
+## Input and scope
+
+This run used the study specification `{study_spec_reference}` (SHA-256 `{study_spec_sha256}`) for the study "{study_title}".
+The implemented slice supports only the canonical auditory oddball EEG intake demo path: BIDS-aligned intake metadata emission, validator-aware status recording, preregistration export, and provenance-aware reproducibility packaging.
+
+## BIDS intake emission
+
+The intake tree was written under `{intake_root}` with `dataset_description.json`, `README.md`, `participants.tsv`, `participants.json`, `intake_manifest.json`, and deterministic placeholder participant artifacts.
+The emitted intake contract targets BIDS version {bids_version} with dataset type `{dataset_type}` while labeling every participant artifact as placeholder-only metadata.
+The placeholder participant identifiers were derived deterministically from `participants.target_n`: {placeholder_ids}.
+
+## Explicitly unimplemented metadata
+
+No empirical EEG signal files, `events.tsv` timing files, `channels.tsv`, `electrodes.tsv`, HED annotations, MNE-BIDS conversion outputs, or MNE preprocessing outputs were emitted.
+Those artifacts remain intentionally absent because the checked-in demo inputs do not specify empirical acquisition files, channel layouts, or event timing.
+
+## Validation and privacy
+
+Study-spec validation status: {study_status}.
+BIDS validator status: {bids_status}.
+Unsupported requested standards for this study spec: {unsupported_standards}.
+The study spec marks `contains_sensitive_data = true`, so privacy review remains mandatory before any empirical data handling.
+
+## Reproducibility artifacts
+
+The bundle includes a machine-readable manifest, commands script, environment snapshot, checksums, study-spec validation, BIDS validator artifact `{bids_validation_artifact}`, run manifest, preregistration export `{preregistration_artifact}`, RO-Crate metadata `{ro_crate}`, and PROV JSON-LD metadata `{prov}`.
+Required human review points remain explicit in `{preregistration_artifact}`: ethics/privacy review, acquisition-metadata completion, event-timing completion, participant/consent review, and empirical-registration completion before non-demo use.
+""".format(
+        study_spec_reference=study_spec_reference,
+        study_spec_sha256=study_spec_sha256,
+        study_title=study_title,
+        intake_root=bids_intake["intake_root"],
+        bids_version=bids_intake["bids_version"],
+        dataset_type=bids_intake["dataset_type"],
+        placeholder_ids=placeholder_ids,
+        study_status=run_manifest["validation"]["study_spec"]["status"],
+        bids_status=_status_line(validator),
+        unsupported_standards=unsupported_standards,
+        bids_validation_artifact=BIDS_VALIDATION_ARTIFACT,
+        preregistration_artifact=run_manifest["preregistration"]["artifact"],
+        ro_crate=run_manifest["provenance"]["ro_crate"],
+        prov=run_manifest["provenance"]["prov"],
+    )
+
+
+def oddball_report_markdown(
+    study_spec_reference: str,
+    run_manifest: Dict[str, Any],
+) -> str:
+    bids_intake = run_manifest["bids_intake"]
+    return """# Oddball BIDS Intake Report
+
+- Study spec: `{study_spec_reference}`
+- Supported path executed: BIDS-aligned intake metadata, validator-aware BIDS status artifact, preregistration export, provenance packaging, reproducibility bundle
+- Intake root: {intake_root}
+- Dataset description: {dataset_description}
+- Participants TSV: {participants_tsv}
+- Placeholder participant count: {participant_count}
+- Placeholder participant artifacts: {placeholder_files}
+- BIDS validator status: {bids_status}
+- Required human review points: ethics/privacy review, acquisition-metadata completion, event-timing completion, participant/consent review, empirical-registration completion
+- Unsupported requested outputs: {unsupported_outputs}
+- Unsupported requested standards: {unsupported_standards}
+- Deferred capabilities: {unsupported_capabilities}
+
+This report summarizes what actually ran. The emitted intake tree is placeholder-only metadata and must not be interpreted as an empirical EEG dataset.
+""".format(
+        study_spec_reference=study_spec_reference,
+        intake_root=bids_intake["intake_root"],
+        dataset_description=bids_intake["dataset_description"],
+        participants_tsv=bids_intake["participants_tsv"],
+        participant_count=bids_intake["participant_count"],
+        placeholder_files=", ".join(bids_intake["placeholder_files"]),
+        bids_status=_status_line(run_manifest["validation"]["bids"]),
+        unsupported_outputs=", ".join(run_manifest["unsupported_requested_outputs"]) or "none",
+        unsupported_standards=", ".join(run_manifest["unsupported_requested_standards"]) or "none",
+        unsupported_capabilities=", ".join(run_manifest["unsupported_capabilities"]),
+    )
+
+
+def oddball_report_bundle_manifest(bids_metadata: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "report": "report/report.md",
+        "methods": "report/methods.md",
+        "commands": "report/commands.sh",
+        "environment": "report/environment.lock.yml",
+        "checksums": "report/checksums.sha256",
+        "validation": {
+            "psychds": None,
+            "bids": BIDS_VALIDATION_ARTIFACT,
+            "hed": None,
+        },
+        "bids_intake": {
+            "root": bids_metadata["intake_root"],
+            "dataset_description": bids_metadata["dataset_description"],
+            "readme": bids_metadata["readme"],
+            "participants_tsv": bids_metadata["participants_tsv"],
+            "participants_json": bids_metadata["participants_json"],
+            "intake_manifest": bids_metadata["intake_manifest"],
+            "placeholder_files": bids_metadata["placeholder_files"],
+            "validator_artifact": BIDS_VALIDATION_ARTIFACT,
+        },
+        "provenance": {
+            "ro_crate": RO_CRATE_ARTIFACT,
+            "prov": PROV_ARTIFACT,
+        },
+        "preregistration": {
+            "artifact": PREREGISTRATION_ARTIFACT,
+        },
+        "run_manifest": RUN_MANIFEST_ARTIFACT,
+    }
+
+
 def report_bundle_manifest(
     hed_metadata: Dict[str, Any],
     modeling_metadata: Dict[str, Any],
@@ -701,12 +1189,18 @@ def build_ro_crate_metadata(
     study_spec_reference: str,
     study_spec_sha256: str,
     expected_files: List[str],
+    metadata_name: str = "RO-Crate metadata descriptor for the canonical Flanker behavioral demo bundle",
+    dataset_description: str = (
+        "Deterministic synthetic-demo Flanker behavioral slice bundle with local "
+        "preregistration and machine-readable provenance exports."
+    ),
+    runner_script: str = "scripts/run_flanker_behavioral_slice.py",
 ) -> Dict[str, Any]:
     graph: List[Dict[str, Any]] = [
         {
             "@id": RO_CRATE_ARTIFACT,
             "@type": "CreativeWork",
-            "name": "RO-Crate metadata descriptor for the canonical Flanker behavioral demo bundle",
+            "name": metadata_name,
             "about": {"@id": "./"},
             "conformsTo": {"@id": "https://w3id.org/ro/crate/1.2"},
             "encodingFormat": "application/ld+json",
@@ -715,10 +1209,7 @@ def build_ro_crate_metadata(
             "@id": "./",
             "@type": "Dataset",
             "name": "{title} reproducibility bundle".format(title=study_title),
-            "description": (
-                "Deterministic synthetic-demo Flanker behavioral slice bundle with local "
-                "preregistration and machine-readable provenance exports."
-            ),
+            "description": dataset_description,
             "hasPart": [{"@id": path} for path in expected_files],
             "isBasedOn": {"@id": "#study-spec"},
             "mentions": [{"@id": "#runner-software"}, {"@id": "#runner-script"}],
@@ -745,7 +1236,7 @@ def build_ro_crate_metadata(
         {
             "@id": "#runner-script",
             "@type": "SoftwareSourceCode",
-            "name": "scripts/run_flanker_behavioral_slice.py",
+            "name": runner_script,
             "programmingLanguage": "Python",
             "isPartOf": {"@id": "#runner-software"},
         },
@@ -773,6 +1264,7 @@ def build_prov_jsonld(
     study_spec_reference: str,
     study_spec_sha256: str,
     expected_files: List[str],
+    activity_name: str = "Canonical Flanker behavioral demo bundle assembly",
 ) -> Dict[str, Any]:
     entities: Dict[str, Dict[str, Any]] = {
         "#study-spec": {
@@ -814,7 +1306,7 @@ def build_prov_jsonld(
         "activity": {
             "#bundle-run": {
                 "prov:type": "Activity",
-                "name": "Canonical Flanker behavioral demo bundle assembly",
+                "name": activity_name,
             }
         },
         "agent": {
